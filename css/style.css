@@ -38,3 +38,17 @@ body {
 .marcador-livre {
     background-color: #2196F3; /* Azul para pontos com Shift */
 }
+
+/* Estilo para a bolinha de preview (fantasma) */
+.marcador-previa {
+    background-color: black;
+    border: 2px solid white;
+    border-radius: 50%;
+    box-shadow: 0 0 4px rgba(0,0,0,0.5);
+    opacity: 0.4;
+    pointer-events: none !important; 
+}
+
+.marcador-previa-livre {
+    background-color: #2196F3;
+}

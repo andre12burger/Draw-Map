@@ -1,7 +1,13 @@
-const map = L.map('map').setView([-32.0332, -52.0986], 14);
+// mapa.js - Core do mapa, variáveis de estado e interações físicas
+
+const map = L.map('map', {
+    doubleClickZoom: false, 
+    boxZoom: false          
+}).setView([-32.0332, -52.0986], 14);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
+    maxZoom: 24,
+    maxNativeZoom: 19,
     attribution: '© OpenStreetMap'
 }).addTo(map);
 
@@ -11,11 +17,8 @@ let marcadores = [];
 let linhasDesenhadas = [];  
 let modosTraco = []; 
 let carregandoRota = false; 
-
-// NOVA VARIÁVEL: Guarda a "linha do tempo" das alterações do mapa
 let historicoEstados = []; 
 
-// NOVA FUNÇÃO: Tira uma "foto" profunda de todos os dados atuais do desenho
 function salvarEstado() {
     historicoEstados.push({
         coordenadas: coordenadasNiveis.map(c => L.latLng(c.lat, c.lng)),
@@ -24,7 +27,6 @@ function salvarEstado() {
     });
 }
 
-// NOVA FUNÇÃO: Destrói os gráficos atuais e redesenha tudo baseado no estado da memória
 function redesenharMapa() {
     marcadores.forEach(m => map.removeLayer(m));
     linhasDesenhadas.forEach(l => { if (l) map.removeLayer(l) });
@@ -43,7 +45,7 @@ function redesenharMapa() {
         } else {
             const estilo = modo === 'livre' ? { color: 'red', weight: 4, opacity: 0.8, dashArray: '10, 10' } : { color: 'red', weight: 4, opacity: 0.8 };
             const linha = L.polyline(segmento, estilo).addTo(map);
-            linha.on('click', (e) => {
+            linha.on('contextmenu', (e) => {
                 L.DomEvent.stopPropagation(e);
                 adicionarPontoNaLinha(linha, e);
             });
@@ -53,22 +55,7 @@ function redesenharMapa() {
     atualizarDistancia();
 }
 
-// Salva a primeira foto do mapa em branco logo ao abrir a página
 salvarEstado();
-
-async function buscarRotaBRouter(inicio, fim) {
-    const url = `https://brouter.de/brouter?lonlats=${inicio.lng},${inicio.lat}|${fim.lng},${fim.lat}&profile=shortest&format=geojson`;
-    try {
-        const resposta = await fetch(url);
-        const dados = await resposta.json();
-        if (dados.features && dados.features.length > 0) {
-            return dados.features[0].geometry.coordinates.map(coord => [coord[1], coord[0]]);
-        }
-    } catch (erro) {
-        console.error("Erro ao buscar a rota no BRouter:", erro);
-    }
-    return [[inicio.lat, inicio.lng], [fim.lat, fim.lng]];
-}
 
 function atualizarDistancia() {
     let distanciaTotal = 0;
@@ -79,6 +66,7 @@ function atualizarDistancia() {
         distanciaTotal += ptA.distanceTo(ptB); 
     }
     document.getElementById('distancia-total').innerText = (distanciaTotal / 1000).toFixed(2);
+    document.getElementById('contador-pontos').innerText = coordenadasNiveis.length;
 }
 
 function criarMarcador(latlng, ehLivre) {
@@ -91,20 +79,37 @@ function criarMarcador(latlng, ehLivre) {
         carregandoRota = true;
         
         const index = marcadores.indexOf(e.target);
-        const novaPosicao = e.target.getLatLng();
+        let novaPosicao = e.target.getLatLng();
+        const ehLivrePonto = modosTraco[index] === 'livre';
+
+        if (!ehLivrePonto) {
+            let refPonto = null;
+            if (index > 0) refPonto = coordenadasNiveis[index - 1];
+            else if (marcadores.length > 1) refPonto = coordenadasNiveis[1];
+
+            if (refPonto) {
+                const trechoTemp = await buscarRotaBRouter(refPonto, novaPosicao, false);
+                if (trechoTemp) {
+                    if (index > 0) novaPosicao = L.latLng(trechoTemp[trechoTemp.length - 1][0], trechoTemp[trechoTemp.length - 1][1]);
+                    else novaPosicao = L.latLng(trechoTemp[0][0], trechoTemp[0][1]);
+                } else {
+                    novaPosicao = coordenadasNiveis[index]; 
+                }
+            } else {
+                const snap = await obterPontoRua(novaPosicao);
+                if (snap) novaPosicao = snap;
+                else novaPosicao = coordenadasNiveis[index];
+            }
+        }
+
+        e.target.setLatLng(novaPosicao);
         coordenadasNiveis[index] = novaPosicao;
 
         if (index > 0) {
             const ptAnterior = coordenadasNiveis[index - 1];
-            let novoTrecho = [];
-            if (modosTraco[index] === 'livre') {
-                novoTrecho = [[ptAnterior.lat, ptAnterior.lng], [novaPosicao.lat, novaPosicao.lng]];
-            } else {
-                novoTrecho = await buscarRotaBRouter(ptAnterior, novaPosicao);
-                const ultimoPonto = novoTrecho[novoTrecho.length - 1];
-                coordenadasNiveis[index] = L.latLng(ultimoPonto[0], ultimoPonto[1]);
-                e.target.setLatLng(coordenadasNiveis[index]); 
-            }
+            let novoTrecho = await buscarRotaBRouter(ptAnterior, novaPosicao, modosTraco[index] === 'livre');
+            if (!novoTrecho) novoTrecho = segmentosRota[index];
+            else if (modosTraco[index] !== 'livre') novoTrecho[0] = [ptAnterior.lat, ptAnterior.lng]; 
             segmentosRota[index] = novoTrecho;
             linhasDesenhadas[index].setLatLngs(novoTrecho);
         } else {
@@ -113,18 +118,15 @@ function criarMarcador(latlng, ehLivre) {
 
         if (index < marcadores.length - 1) {
             const ptProximo = coordenadasNiveis[index + 1];
-            let novoTrechoProximo = [];
-            if (modosTraco[index + 1] === 'livre') {
-                novoTrechoProximo = [[coordenadasNiveis[index].lat, coordenadasNiveis[index].lng], [ptProximo.lat, ptProximo.lng]];
-            } else {
-                novoTrechoProximo = await buscarRotaBRouter(coordenadasNiveis[index], ptProximo);
-            }
+            let novoTrechoProximo = await buscarRotaBRouter(novaPosicao, ptProximo, modosTraco[index + 1] === 'livre');
+            if (!novoTrechoProximo) novoTrechoProximo = segmentosRota[index + 1];
+            else if (modosTraco[index + 1] !== 'livre') novoTrechoProximo[0] = [novaPosicao.lat, novaPosicao.lng]; 
             segmentosRota[index + 1] = novoTrechoProximo;
             linhasDesenhadas[index + 1].setLatLngs(novoTrechoProximo);
         }
         
         atualizarDistancia();
-        salvarEstado(); // Salva a foto do mapa após arrastar
+        salvarEstado(); 
         carregandoRota = false;
     });
 
@@ -143,30 +145,32 @@ async function adicionarPontoNaLinha(linha, evento) {
 
     let coordenadaClique = evento.latlng;
     const modoAtual = modosTraco[index];
+    const ehLivre = modoAtual === 'livre';
+    const ptAnterior = coordenadasNiveis[index - 1];
+    let trechoAnterior = await buscarRotaBRouter(ptAnterior, coordenadaClique, ehLivre);
 
-    const novoMarcador = criarMarcador(coordenadaClique, modoAtual === 'livre');
+    if (!trechoAnterior) {
+        alert("O servidor roteador está ocupado. Espere 1 segundo e tente novamente.");
+        carregandoRota = false;
+        return;
+    }
+
+    if (!ehLivre) {
+        coordenadaClique = L.latLng(trechoAnterior[trechoAnterior.length - 1][0], trechoAnterior[trechoAnterior.length - 1][1]);
+        trechoAnterior[0] = [ptAnterior.lat, ptAnterior.lng];
+    }
+
+    const novoMarcador = criarMarcador(coordenadaClique, ehLivre);
     coordenadasNiveis.splice(index, 0, coordenadaClique);
     marcadores.splice(index, 0, novoMarcador);
     modosTraco.splice(index, 0, modoAtual);
     linhasDesenhadas.splice(index, 0, null); 
     segmentosRota.splice(index, 0, []); 
 
-    const ptAnterior = coordenadasNiveis[index - 1];
-    let trechoAnterior = [];
-    if (modoAtual === 'livre') {
-        trechoAnterior = [[ptAnterior.lat, ptAnterior.lng], [coordenadaClique.lat, coordenadaClique.lng]];
-    } else {
-        trechoAnterior = await buscarRotaBRouter(ptAnterior, coordenadaClique);
-        const ult = trechoAnterior[trechoAnterior.length - 1];
-        coordenadaClique = L.latLng(ult[0], ult[1]);
-        coordenadasNiveis[index] = coordenadaClique;
-        novoMarcador.setLatLng(coordenadaClique);
-    }
-
-    const estiloLinha = modoAtual === 'livre' ? { color: 'red', weight: 4, opacity: 0.8, dashArray: '10, 10' } : { color: 'red', weight: 4, opacity: 0.8 };
+    const estiloLinha = ehLivre ? { color: 'red', weight: 4, opacity: 0.8, dashArray: '10, 10' } : { color: 'red', weight: 4, opacity: 0.8 };
     const novaLinhaAnterior = L.polyline(trechoAnterior, estiloLinha).addTo(map);
     
-    novaLinhaAnterior.on('click', (e) => {
+    novaLinhaAnterior.on('contextmenu', (e) => {
         L.DomEvent.stopPropagation(e); 
         adicionarPontoNaLinha(novaLinhaAnterior, e);
     });
@@ -175,19 +179,18 @@ async function adicionarPontoNaLinha(linha, evento) {
     segmentosRota[index] = trechoAnterior;
 
     const ptProximo = coordenadasNiveis[index + 1];
-    const modoProximo = modosTraco[index + 1];
-    let trechoProximo = [];
-    if (modoProximo === 'livre') {
-        trechoProximo = [[coordenadaClique.lat, coordenadaClique.lng], [ptProximo.lat, ptProximo.lng]];
-    } else {
-        trechoProximo = await buscarRotaBRouter(coordenadaClique, ptProximo);
+    let trechoProximo = await buscarRotaBRouter(coordenadaClique, ptProximo, modosTraco[index + 1] === 'livre');
+
+    if (trechoProximo) {
+        if (!ehLivre && modosTraco[index + 1] !== 'livre') {
+            trechoProximo[0] = [coordenadaClique.lat, coordenadaClique.lng];
+        }
+        linhasDesenhadas[index + 1].setLatLngs(trechoProximo);
+        segmentosRota[index + 1] = trechoProximo;
     }
 
-    linhasDesenhadas[index + 1].setLatLngs(trechoProximo);
-    segmentosRota[index + 1] = trechoProximo;
-
     atualizarDistancia();
-    salvarEstado(); // Salva a foto do mapa após criar o ponto no meio da linha
+    salvarEstado(); 
     carregandoRota = false;
 }
 
@@ -200,11 +203,22 @@ map.on('click', async function(evento) {
     const ehPrimeiroPonto = coordenadasNiveis.length === 0;
 
     if (ehPrimeiroPonto) {
-        coordenadasNiveis.push(coordenadaAtual);
-        segmentosRota.push([[coordenadaAtual.lat, coordenadaAtual.lng]]); 
-        modosTraco.push('inicio');
+        let posicaoInicial = coordenadaAtual;
+        if (!shiftPressionado) {
+            const snap = await obterPontoRua(coordenadaAtual);
+            if (!snap) {
+                alert("Servidor ocupado. Aguarde 1 segundo e tente novamente.");
+                carregandoRota = false;
+                return;
+            }
+            posicaoInicial = snap; 
+        }
+
+        coordenadasNiveis.push(posicaoInicial);
+        segmentosRota.push([[posicaoInicial.lat, posicaoInicial.lng]]); 
+        modosTraco.push(shiftPressionado ? 'livre' : 'rua');
         linhasDesenhadas.push(null); 
-        marcadores.push(criarMarcador(coordenadaAtual, shiftPressionado));
+        marcadores.push(criarMarcador(posicaoInicial, shiftPressionado));
         
         salvarEstado();
         carregandoRota = false;
@@ -212,30 +226,34 @@ map.on('click', async function(evento) {
     }
 
     const pontoAnterior = coordenadasNiveis[coordenadasNiveis.length - 1];
-    let trechoRota = [];
+    let trechoRota = await buscarRotaBRouter(pontoAnterior, coordenadaAtual, shiftPressionado);
+
+    if (!trechoRota) {
+        alert("Servidor ocupado. Aguarde 1 segundo e tente novamente.");
+        carregandoRota = false;
+        return;
+    }
+
     let estiloLinha = {};
+    let posicaoFinal;
 
     if (shiftPressionado) {
-        trechoRota = [[pontoAnterior.lat, pontoAnterior.lng], [coordenadaAtual.lat, coordenadaAtual.lng]];
-        coordenadasNiveis.push(coordenadaAtual);
+        posicaoFinal = coordenadaAtual;
         estiloLinha = { color: 'red', weight: 4, opacity: 0.8, dashArray: '10, 10' };
         modosTraco.push('livre');
-        marcadores.push(criarMarcador(coordenadaAtual, true));
-        
     } else {
-        trechoRota = await buscarRotaBRouter(pontoAnterior, coordenadaAtual); 
-        const ultimoPonto = trechoRota[trechoRota.length - 1];
-        const coordenadaAjustada = L.latLng(ultimoPonto[0], ultimoPonto[1]);
-
-        coordenadasNiveis.push(coordenadaAjustada);
+        posicaoFinal = L.latLng(trechoRota[trechoRota.length - 1][0], trechoRota[trechoRota.length - 1][1]);
+        trechoRota[0] = [pontoAnterior.lat, pontoAnterior.lng];
         estiloLinha = { color: 'red', weight: 4, opacity: 0.8 };
         modosTraco.push('rua');
-        marcadores.push(criarMarcador(coordenadaAjustada, false));
     }
+
+    coordenadasNiveis.push(posicaoFinal);
+    marcadores.push(criarMarcador(posicaoFinal, shiftPressionado)); 
 
     const novaLinha = L.polyline(trechoRota, estiloLinha).addTo(map);
     
-    novaLinha.on('click', (e) => {
+    novaLinha.on('contextmenu', (e) => {
         L.DomEvent.stopPropagation(e);
         adicionarPontoNaLinha(novaLinha, e);
     });
@@ -244,26 +262,21 @@ map.on('click', async function(evento) {
     segmentosRota.push(trechoRota);
 
     atualizarDistancia();
-    salvarEstado(); // Salva a foto do mapa após um clique normal
+    salvarEstado(); 
     carregandoRota = false; 
 });
 
-// O Sistema de Desfazer (Ctrl + Z) atualizado com a Máquina do Tempo
 window.addEventListener('keyup', function(evento) {
     if (evento.ctrlKey && (evento.key === 'z' || evento.key === 'Z')) {
-        // Verifica se há algo no passado para resgatar
         if (historicoEstados.length > 1) {
-            historicoEstados.pop(); // Descarta o presente (última ação)
-            
-            // Pega as memórias do passo imediatamente anterior
+            historicoEstados.pop(); 
             const passado = historicoEstados[historicoEstados.length - 1]; 
             
-            // Substitui todas as listas atuais pelas memórias passadas
             coordenadasNiveis = passado.coordenadas.map(c => L.latLng(c.lat, c.lng));
             segmentosRota = JSON.parse(JSON.stringify(passado.segmentos));
             modosTraco = [...passado.modos];
             
-            redesenharMapa(); // Refaz o desenho baseado no passado
+            redesenharMapa(); 
         }
     }
 });
@@ -273,36 +286,5 @@ document.getElementById('btn-limpar').addEventListener('click', function() {
     segmentosRota = [];
     modosTraco = [];
     redesenharMapa();
-    salvarEstado(); // Grava a limpeza no histórico (permitindo Ctrl+Z para desfazer a exclusão)
-});
-
-document.getElementById('btn-exportar').addEventListener('click', function() {
-    if (segmentosRota.length === 0) {
-        alert("Desenhe uma rota no mapa primeiro!");
-        return;
-    }
-    
-    let gpx = '<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Strava Art Generator">\n  <trk>\n    <name>Strava Art Route</name>\n    <trkseg>\n';
-    
-    const todosPontos = segmentosRota.flat();
-    let ultimoPonto = null;
-
-    todosPontos.forEach(ponto => {
-        if (!ultimoPonto || ultimoPonto[0] !== ponto[0] || ultimoPonto[1] !== ponto[1]) {
-            gpx += `      <trkpt lat="${ponto[0]}" lon="${ponto[1]}"></trkpt>\n`;
-            ultimoPonto = ponto;
-        }
-    });
-    
-    gpx += '    </trkseg>\n  </trk>\n</gpx>';
-    
-    const blob = new Blob([gpx], { type: 'application/gpx+xml' });
-    const url = URL.createObjectURL(blob);
-    const linkTag = document.createElement('a');
-    linkTag.href = url;
-    linkTag.download = 'strava_art.gpx';
-    document.body.appendChild(linkTag);
-    linkTag.click();
-    document.body.removeChild(linkTag);
-    URL.revokeObjectURL(url);
+    salvarEstado(); 
 });

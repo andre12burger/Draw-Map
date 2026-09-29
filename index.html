@@ -7,6 +7,14 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="css/style.css">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Leaflet CSS e JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Plugin para Deslocamento de Linhas (Offset) -->
+    <script src="https://unpkg.com/leaflet-polylineoffset/leaflet.polylineoffset.js"></script>
+
 </head>
 <body>
     <!-- Painel de Legenda flutuante -->
@@ -14,19 +22,28 @@
         <strong>Modos de Traçado:</strong><br><br>
         🖱️ <b>Clique:</b> Segue as ruas<br>
         ⇧ <b>Shift + Clique:</b> Reta livre (Tracejada)<br>
+        🖱️ <b>Botão Direito na linha:</b> Adiciona ponto de edição<br>
         ⎌ <b>Ctrl + Z:</b> Desfazer último trecho<br><br>
         
-        <!-- Contador de Distância -->
-        <div style="margin-bottom: 15px; font-size: 15px; background: #f0f0f0; padding: 5px; border-radius: 4px; text-align: center;">
-            📏 <strong>Distância:</strong> <span id="distancia-total">0.00</span> km
+        <!-- Painel de Estatísticas -->
+        <div style="margin-bottom: 15px; font-size: 15px; background: #f0f0f0; padding: 8px; border-radius: 4px; text-align: center; line-height: 1.5;">
+            📏 <strong>Distância:</strong> <span id="distancia-total">0.00</span> km<br>
+            📍 <strong>Pontos:</strong> <span id="contador-pontos">0</span>
         </div>
         
-        <!-- Novos Botões -->
         <button id="btn-exportar" style="width: 100%; padding: 8px; margin-bottom: 8px; cursor: pointer; background-color: #4CAF50; color: white; border: none; border-radius: 4px; font-weight: bold;">📥 Baixar .GPX</button>
         <button id="btn-limpar" style="width: 100%; padding: 8px; cursor: pointer; background-color: #ff4c4c; color: white; border: none; border-radius: 4px; font-weight: bold;">🗑️ Apagar Tudo</button>
     </div>
 
     <div id="map"></div>
+    <!-- Leaflet CSS/JS (já existentes) -->
+    
+    <!-- Scripts da Ferramenta -->
+    <script src="js/api.js"></script>
     <script src="js/mapa.js"></script>
+    <script src="js/previsao.js"></script>
+    <script src="js/exportacao.js"></script>
+</body>
+</html>
 </body>
 </html>
