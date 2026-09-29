@@ -1,0 +1,23 @@
+body {
+    margin: 0;
+    padding: 0;
+}
+
+#map {
+    width: 100vw;
+    height: 100vh;
+}
+
+#legenda {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background-color: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    font-family: sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    z-index: 1000; /* Mantém a legenda acima do mapa */
+}
