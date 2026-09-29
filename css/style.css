@@ -21,3 +21,20 @@ body {
     line-height: 1.5;
     z-index: 1000; /* Mantém a legenda acima do mapa */
 }
+
+/* Estilo para os marcadores arrastáveis */
+.marcador-custom {
+    background-color: black;
+    border: 2px solid white;
+    border-radius: 50%;
+    box-shadow: 0 0 4px rgba(0,0,0,0.5);
+    cursor: grab;
+}
+
+.marcador-custom:active {
+    cursor: grabbing;
+}
+
+.marcador-livre {
+    background-color: #2196F3; /* Azul para pontos com Shift */
+}
