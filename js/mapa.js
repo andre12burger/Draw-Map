@@ -1,4 +1,52 @@
-// mapa.js - Core do mapa, variáveis de estado e interações físicas
+// js/mapa.js - Core do mapa, variáveis de estado e interações físicas
+
+window.ferramentaAtiva = 'rua'; 
+
+// Controle dos botões
+document.getElementById('btn-ferramenta-rua').addEventListener('click', function() {
+    window.ferramentaAtiva = 'rua';
+    atualizarBotoesFerramentas(this);
+    document.getElementById('map').classList.remove('cursor-lapis');
+});
+
+document.getElementById('btn-ferramenta-livre').addEventListener('click', function() {
+    window.ferramentaAtiva = 'livre';
+    atualizarBotoesFerramentas(this);
+    document.getElementById('map').classList.remove('cursor-lapis');
+});
+
+document.getElementById('btn-ferramenta-lapis').addEventListener('click', function() {
+    window.ferramentaAtiva = 'lapis';
+    atualizarBotoesFerramentas(this);
+    document.getElementById('map').classList.add('cursor-lapis');
+});
+
+function atualizarBotoesFerramentas(botaoAtivo) {
+    document.querySelectorAll('.btn-ferramenta').forEach(btn => btn.classList.remove('ativo'));
+    botaoAtivo.classList.add('ativo');
+}
+
+// Atalhos de teclado (1, 2, 3)
+window.addEventListener('keydown', function(e) {
+    // Ignora atalhos se o usuário estiver digitando em algum campo de texto no futuro
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    
+    if (e.key === '1') document.getElementById('btn-ferramenta-rua').click();
+    if (e.key === '2') document.getElementById('btn-ferramenta-livre').click();
+    if (e.key === '3') document.getElementById('btn-ferramenta-lapis').click();
+    
+    // Ctrl + Z
+    if (e.ctrlKey && (e.key === 'z' || e.key === 'Z')) {
+        if (historicoEstados.length > 1) {
+            historicoEstados.pop(); 
+            const passado = historicoEstados[historicoEstados.length - 1]; 
+            coordenadasNiveis = passado.coordenadas.map(c => L.latLng(c.lat, c.lng));
+            segmentosRota = JSON.parse(JSON.stringify(passado.segmentos));
+            modosTraco = [...passado.modos];
+            redesenharMapa(); 
+        }
+    }
+});
 
 const map = L.map('map', {
     doubleClickZoom: false, 
@@ -146,6 +194,7 @@ async function adicionarPontoNaLinha(linha, evento) {
     let coordenadaClique = evento.latlng;
     const modoAtual = modosTraco[index];
     const ehLivre = modoAtual === 'livre';
+
     const ptAnterior = coordenadasNiveis[index - 1];
     let trechoAnterior = await buscarRotaBRouter(ptAnterior, coordenadaClique, ehLivre);
 
@@ -194,50 +243,48 @@ async function adicionarPontoNaLinha(linha, evento) {
     carregandoRota = false;
 }
 
-map.on('click', async function(evento) {
-    if (carregandoRota) return;
+// Isola a lógica de adicionar um ponto para ser chamada pelo clique ou pelo script do Lápis
+window.processarNovoPonto = async function(coordenadaAtual, modoLivreAtivo) {
+    if (carregandoRota) return false;
     carregandoRota = true;
     
-    const coordenadaAtual = evento.latlng;
-    const shiftPressionado = evento.originalEvent.shiftKey;
     const ehPrimeiroPonto = coordenadasNiveis.length === 0;
 
     if (ehPrimeiroPonto) {
         let posicaoInicial = coordenadaAtual;
-        if (!shiftPressionado) {
+        
+        if (!modoLivreAtivo) {
             const snap = await obterPontoRua(coordenadaAtual);
             if (!snap) {
-                alert("Servidor ocupado. Aguarde 1 segundo e tente novamente.");
                 carregandoRota = false;
-                return;
+                return false;
             }
             posicaoInicial = snap; 
         }
 
         coordenadasNiveis.push(posicaoInicial);
         segmentosRota.push([[posicaoInicial.lat, posicaoInicial.lng]]); 
-        modosTraco.push(shiftPressionado ? 'livre' : 'rua');
+        modosTraco.push(modoLivreAtivo ? 'livre' : 'rua');
         linhasDesenhadas.push(null); 
-        marcadores.push(criarMarcador(posicaoInicial, shiftPressionado));
+        marcadores.push(criarMarcador(posicaoInicial, modoLivreAtivo));
         
         salvarEstado();
         carregandoRota = false;
-        return; 
+        return true; 
     }
 
     const pontoAnterior = coordenadasNiveis[coordenadasNiveis.length - 1];
-    let trechoRota = await buscarRotaBRouter(pontoAnterior, coordenadaAtual, shiftPressionado);
+    let trechoRota = await buscarRotaBRouter(pontoAnterior, coordenadaAtual, modoLivreAtivo);
 
     if (!trechoRota) {
-        alert("Servidor ocupado. Aguarde 1 segundo e tente novamente.");
         carregandoRota = false;
-        return;
+        return false;
     }
 
     let estiloLinha = {};
     let posicaoFinal;
 
-    if (shiftPressionado) {
+    if (modoLivreAtivo) {
         posicaoFinal = coordenadaAtual;
         estiloLinha = { color: 'red', weight: 4, opacity: 0.8, dashArray: '10, 10' };
         modosTraco.push('livre');
@@ -249,10 +296,9 @@ map.on('click', async function(evento) {
     }
 
     coordenadasNiveis.push(posicaoFinal);
-    marcadores.push(criarMarcador(posicaoFinal, shiftPressionado)); 
+    marcadores.push(criarMarcador(posicaoFinal, modoLivreAtivo)); 
 
     const novaLinha = L.polyline(trechoRota, estiloLinha).addTo(map);
-    
     novaLinha.on('contextmenu', (e) => {
         L.DomEvent.stopPropagation(e);
         adicionarPontoNaLinha(novaLinha, e);
@@ -263,21 +309,18 @@ map.on('click', async function(evento) {
 
     atualizarDistancia();
     salvarEstado(); 
-    carregandoRota = false; 
-});
+    carregandoRota = false;
+    return true;
+}
 
-window.addEventListener('keyup', function(evento) {
-    if (evento.ctrlKey && (evento.key === 'z' || evento.key === 'Z')) {
-        if (historicoEstados.length > 1) {
-            historicoEstados.pop(); 
-            const passado = historicoEstados[historicoEstados.length - 1]; 
-            
-            coordenadasNiveis = passado.coordenadas.map(c => L.latLng(c.lat, c.lng));
-            segmentosRota = JSON.parse(JSON.stringify(passado.segmentos));
-            modosTraco = [...passado.modos];
-            
-            redesenharMapa(); 
-        }
+map.on('click', async function(evento) {
+    // Ignora cliques simples se a ferramenta lápis estiver ativada
+    if (window.ferramentaAtiva === 'lapis') return;
+    
+    const modoLivreAtivo = evento.originalEvent.shiftKey || window.ferramentaAtiva === 'livre';
+    const sucesso = await window.processarNovoPonto(evento.latlng, modoLivreAtivo);
+    if (!sucesso && !carregandoRota) {
+        alert("Servidor ocupado. Aguarde 1 segundo e tente novamente.");
     }
 });
 

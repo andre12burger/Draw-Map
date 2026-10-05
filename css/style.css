@@ -52,3 +52,64 @@ body {
 .marcador-previa-livre {
     background-color: #2196F3;
 }
+
+/* ==========================================
+   BARRA DE FERRAMENTAS LATERAL
+   ========================================== */
+.toolbar {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1000; /* Fica acima do mapa do Leaflet */
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: white;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.btn-ferramenta {
+    padding: 12px 15px;
+    border: 2px solid transparent;
+    background: #f8f9fa;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-ferramenta:hover:not(:disabled) {
+    background: #e9ecef;
+}
+
+/* Estado Ativo: Modo Rua */
+#btn-ferramenta-rua.ativo {
+    border-color: #F44336;
+    background: #ffebee;
+    color: #c62828;
+}
+
+/* Estado Ativo: Modo Livre */
+#btn-ferramenta-livre.ativo {
+    border-color: #2196F3;
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+.btn-ferramenta:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    filter: grayscale(100%);
+}
+
+/* Cursor para o Modo Lápis */
+.cursor-lapis {
+    cursor: crosshair !important;
+}

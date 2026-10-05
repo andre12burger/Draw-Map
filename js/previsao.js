@@ -3,9 +3,27 @@
 let marcadorPrevia = null;
 let debouncePrevia = null;
 
+async function obterSnapSilencioso(latlng) {
+    const destinoFake = L.latLng(latlng.lat + 0.0001, latlng.lng + 0.0001);
+    const url = `https://brouter.de/brouter?lonlats=${latlng.lng},${latlng.lat}|${destinoFake.lng},${destinoFake.lat}&profile=shortest&format=geojson`;
+    try {
+        const resposta = await fetch(url);
+        if (!resposta.ok) return null;
+        const dados = await resposta.json();
+        if (dados.features && dados.features.length > 0) {
+            return L.latLng(dados.features[0].geometry.coordinates[0][1], dados.features[0].geometry.coordinates[0][0]);
+        }
+    } catch (e) {
+        return null;
+    }
+    return null;
+}
+
 map.on('mousemove', function(e) {
-    const shiftPressionado = e.originalEvent.shiftKey;
-    const classeCss = shiftPressionado ? 'marcador-previa marcador-previa-livre' : 'marcador-previa';
+    // Agora a previsão respeita o botão da toolbar OU o Shift
+    const usarModoLivre = e.originalEvent.shiftKey || window.ferramentaAtiva === 'livre';
+    
+    const classeCss = usarModoLivre ? 'marcador-previa marcador-previa-livre' : 'marcador-previa';
     const iconePrevia = L.divIcon({ className: classeCss, iconSize: [12, 12], iconAnchor: [6, 6] });
 
     if (!marcadorPrevia) {
@@ -16,7 +34,7 @@ map.on('mousemove', function(e) {
 
     marcadorPrevia.setLatLng(e.latlng);
 
-    if (shiftPressionado) {
+    if (usarModoLivre) {
         marcadorPrevia.setOpacity(1); 
         clearTimeout(debouncePrevia);
         return;
@@ -26,7 +44,7 @@ map.on('mousemove', function(e) {
     clearTimeout(debouncePrevia);
     
     debouncePrevia = setTimeout(async () => {
-        if (marcadorPrevia && !shiftPressionado) {
+        if (marcadorPrevia && !usarModoLivre) {
             const snap = await obterSnapSilencioso(e.latlng);
             if (snap) {
                 marcadorPrevia.setLatLng(snap);
@@ -55,8 +73,11 @@ window.addEventListener('keydown', function(e) {
 
 window.addEventListener('keyup', function(e) {
     if (e.key === 'Shift' && marcadorPrevia) {
-        const iconeRua = L.divIcon({ className: 'marcador-previa', iconSize: [12, 12], iconAnchor: [6, 6] });
-        marcadorPrevia.setIcon(iconeRua);
-        marcadorPrevia.setOpacity(0.4);
+        // Só devolve para o estilo de rua se a toolbar não estiver forçando o modo livre
+        if (window.ferramentaAtiva !== 'livre') {
+            const iconeRua = L.divIcon({ className: 'marcador-previa', iconSize: [12, 12], iconAnchor: [6, 6] });
+            marcadorPrevia.setIcon(iconeRua);
+            marcadorPrevia.setOpacity(0.4);
+        }
     }
 });

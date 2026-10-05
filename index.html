@@ -35,15 +35,24 @@
         <button id="btn-limpar" style="width: 100%; padding: 8px; cursor: pointer; background-color: #ff4c4c; color: white; border: none; border-radius: 4px; font-weight: bold;">🗑️ Apagar Tudo</button>
     </div>
 
+    <div id="toolbar" class="toolbar">
+        <button id="btn-ferramenta-rua" class="btn-ferramenta ativo" title="Modo Rua (Atalho: Tecla 1)">
+            🛣️ Rua
+        </button>
+        <button id="btn-ferramenta-livre" class="btn-ferramenta" title="Modo Livre (Atalho: Tecla 2 ou Shift)">
+            🦅 Livre
+        </button>
+        <button id="btn-ferramenta-lapis" class="btn-ferramenta" title="Modo Lápis Inteligente (Atalho: Tecla 3)">
+            ✏️ Lápis
+        </button>
+    </div>
+
     <div id="map"></div>
-    <!-- Leaflet CSS/JS (já existentes) -->
-    
     <!-- Scripts da Ferramenta -->
     <script src="js/api.js"></script>
     <script src="js/mapa.js"></script>
     <script src="js/previsao.js"></script>
     <script src="js/exportacao.js"></script>
-</body>
-</html>
+    <script src="js/lapis.js"></script>
 </body>
 </html>
