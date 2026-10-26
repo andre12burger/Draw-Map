@@ -1,46 +1,63 @@
-# Strava Art Generator 🏃‍♂️🎨
+# 🏃‍♂️🎨 Strava Art Generator (Web Service)
 
-Uma ferramenta web interativa desenvolvida para facilitar o planejamento de GPS Art (Strava Art) para corredores e ciclistas. O projeto permite desenhar rotas em cima de mapas reais, combinando traçados magnéticos que respeitam a malha urbana com opções de traçado livre para liberdade artística.
+Um Web Service interativo projetado para o planeamento de rotas de GPS Art (Strava Art). Este sistema utiliza uma arquitetura **Cliente/Servidor** para integrar múltiplas APIs externas de geolocalização e roteamento urbano, permitindo o desenho de rotas magnéticas inteligentes sobre o mapa.
 
-## 🚀 Funcionalidades
+Projeto académico desenvolvido para a disciplina de Cliente/Servidor.
 
-* **Snap-to-Road (Traçado Inteligente):** Clique no mapa e a linha seguirá automaticamente o fluxo das ruas e calçadas utilizando o motor de roteamento do BRouter, otimizado para pedestres e atividades ao ar livre.
-* **Traçado Livre (Modo Linha Reta):** Pressione `Shift + Clique` para forçar um traçado ignorando as restrições da via (ideal para cruzar praças, terrenos abertos ou criar conexões não mapeadas).
-* **Correção Automática de Nós:** Os marcadores visuais se ajustam magneticamente ao limite das ruas para garantir a precisão da rota.
-* **Sistema de Desfazer:** Cometeu um erro? Pressione `Ctrl + Z` para apagar o último trecho desenhado sem perder o resto do trabalho.
+## ✨ Funcionalidades e Regras de Negócio
 
-## 🛠️ Tecnologias Utilizadas
+* **Roteamento Inteligente (Snap-to-Road):** O backend consome a API BRouter para calcular rotas reais, prendendo o traço do utilizador à malha de ruas e calçadas.
+* **Geocodificação e Autocomplete:** Barra de busca integrada à API Nominatim, permitindo procurar endereços e voar diretamente para o local com centralização automática.
+* **Batch Routing Engine:** Otimização de requisições em lote para processamento de desenhos densos (Modo Lápis), prevenindo estouros no limite de URI da API pública.
+* **Exportação Nativa:** Compilação da matriz de segmentos diretamente para um ficheiro `.gpx` estruturado no padrão 1.1 XML.
+* **Gestão de Estado (Observer):** Histórico de estados imutável com persistência via LocalStorage e suporte a *rollback* topológico (Ctrl+Z).
+* **Navegação Dinâmica:** Ferramenta de desenho livre (Lápis) com atalho de barra de espaço para arrastar o ecrã fluidamente.
 
-* **Frontend:** HTML5, CSS3, JavaScript (Vanilla)
-* **Mapa e Interatividade:** [Leaflet.js](https://leafletjs.com/)
-* **Dados Cartográficos:** [OpenStreetMap](https://www.openstreetmap.org/)
-* **Motor de Roteamento:** API Pública do [BRouter](https://brouter.de/) (Perfil: Foot/Walking)
+## 🏗️ Arquitetura do Sistema
 
-## ⚙️ Como executar o projeto localmente
+O projeto adota o padrão **Proxy Pattern** no servidor para isolar as credenciais, contornar bloqueios de CORS e reduzir o processamento no dispositivo do utilizador final.
 
-Como o projeto faz requisições externas para carregar as imagens do mapa, é necessário executá-lo através de um servidor web local para evitar bloqueios de segurança (CORS).
+* **Frontend (Cliente):** HTML5, CSS3, JavaScript Vanilla (ES6 Modules) + Leaflet.
+* **Backend (Web Service):** Node.js com Express.
+* **APIs Externas Integradas:**
+1. **BRouter API:** Consulta de matrizes de rotas (`profile=shortest`).
+2. **Nominatim API (OpenStreetMap):** Serviço de geocodificação e pesquisa por string com retorno em GeoJSON.
 
-1. Clone este repositório:
+
+
+## 🚀 Como Executar o Projeto
+
+### Rodando Localmente
+
+1. Certifique-se de ter o [Node.js](https://nodejs.org/) instalado (versão 18+).
+2. Clone o repositório e aceda à pasta raiz:
 ```bash
-git clone [https://github.com/seu-usuario/strava-art-generator.git](https://github.com/seu-usuario/strava-art-generator.git)
+git clone https://github.com/seu-usuario/strava-art-generator.git
+cd strava-art-generator
+
 ```
 
-2. Abra o terminal na pasta raiz do projeto.
-3. Inicie um servidor HTTP usando Python:
+
+3. Instale as dependências do servidor:
 ```bash
-python -m http.server 8000
+npm install
 
 ```
 
 
-4. Abra o navegador e acesse: `http://localhost:8000`
+4. Inicie o Web Service:
+```bash
+npm start
 
-## 👨‍💻 Autor
+```
+
+
+5. Aceda no navegador: `http://localhost:3000`
+
+## 👨‍💻 Autoria
 
 **André Luiz Ditzel Burger**
 
-Estudante de Engenharia de Automação (FURG) e entusiasta de corridas de longa distância e GPS Art.
+Engenharia de Automação — Universidade Federal do Rio Grande (FURG).
 
 ---
-
-*Projeto em desenvolvimento. Próximos passos incluem exportação direta para arquivo `.gpx`.*
