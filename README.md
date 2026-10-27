@@ -169,7 +169,7 @@ Cobertura atual dos testes unitários:
 - `validators` / `cache`: injeção de parâmetros, allowlist, ranges, TTL e LRU.
 - `frontend-smoke`: inicializa o `index.html` real, o Leaflet e o `main.js` em jsdom; desenha dois pontos, calcula distância, desfaz, apaga e desfaz a limpeza.
 
-O workflow de CI (`.github/workflows/ci.yml`) executa lint, formatação, testes unitários e E2E em Node 24.
+O template de CI está em `docs/ci/workflow-ci.yml` (o app de integração usado neste ambiente não tem permissão para publicar arquivos em `.github/workflows/`). Para ativá-lo, copie o arquivo para `.github/workflows/ci.yml` em um commit com permissão de workflows. Ele executa lint, formatação, testes unitários e E2E em Node 24.
 
 ---
 

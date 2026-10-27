@@ -228,7 +228,7 @@ Para compensar, foi criado o teste `frontend-smoke.test.js`, que carrega o `inde
 - `repomix-output.xml` apagado do disco (snapshot obsoleto que listava `grafico.js`, já removido).
 - `package-lock.json` atualizado.
 - `public/vendor/leaflet` versionado e regenerável via `npm run vendor` / `postinstall`.
-- CI em `.github/workflows/ci.yml` com dois jobs (lint/test e E2E), Node 24 e cache de npm.
+- Template de CI em `docs/ci/workflow-ci.yml` com dois jobs (lint/test e E2E), Node 24 e cache de npm. Ele não pôde ser publicado em `.github/workflows/ci.yml` porque o app de integração do ambiente não tem a permissão `workflows`; basta copiá-lo para o caminho definitivo em um commit autorizado.
 
 ---
 
