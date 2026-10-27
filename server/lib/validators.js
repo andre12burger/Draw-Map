@@ -13,7 +13,7 @@ const MAX_PONTOS = 50;
 const MAX_TERMO_BUSCA = 200;
 
 // longitude/latitude com até 8 casas decimais, sem sinal de "+" e sem expoente
-const RE_NUMERO = /^-?\d{1,3}(?:\.\d{1,8})?$/;
+const RE_NUMERO = /^-?\d{1,3}(?:\.\d+)?$/;
 
 /**
  * @param {string} valor - Par "lon,lat" (ex.: "-52.0986,-32.0332").
