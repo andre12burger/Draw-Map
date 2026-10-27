@@ -1,76 +1,120 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Planeje rotas de GPS Art (Strava Art) que seguem ruas reais e exporte o traçado em GPX."
+    />
     <title>Strava Art Generator</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="css/style.css">
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <!-- Leaflet CSS e JS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
-    <!-- Plugin para Deslocamento de Linhas  -->
-    <script src="https://unpkg.com/leaflet-polylineoffset/leaflet.polylineoffset.js"></script>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
+    <link rel="stylesheet" href="css/style.css" />
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-</head>
-<body>
-    <!-- Painel de Legenda flutuante -->
-    <div id="legenda">
-        <!-- Barra de Pesquisa de Endereço -->
-        <div style="margin-bottom: 15px; display: flex; gap: 5px; position: relative;">
-            <div style="position: relative; flex: 1;">
-                <input type="text" id="input-endereco" placeholder="Ex: Praça Saraiva, Rio Grande" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; box-sizing: border-box;">
-                
-                <!-- Esta é a caixa que vai aparecer e desaparecer com as opções -->
-                <div id="sugestoes-endereco" class="sugestoes-box"></div>
-            </div>
-            
-            <button id="btn-buscar-endereco" style="padding: 8px 12px; background-color: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">🔍</button>
+    <script src="vendor/leaflet/leaflet.js"></script>
+  </head>
+  <body>
+    <div id="legenda" role="region" aria-label="Painel de planejamento da rota">
+      <form id="form-busca" class="busca" role="search">
+        <div class="busca__campo">
+          <label class="sr-only" for="input-endereco">Pesquisar endereço</label>
+          <input
+            type="search"
+            id="input-endereco"
+            placeholder="Ex.: Praça Saraiva, Rio Grande"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded="false"
+            aria-controls="sugestoes-endereco"
+            autocomplete="off"
+          />
+          <div
+            id="sugestoes-endereco"
+            class="sugestoes-box"
+            role="listbox"
+            aria-label="Sugestões de endereço"
+            hidden
+          ></div>
         </div>
+        <button
+          type="submit"
+          id="btn-buscar-endereco"
+          class="btn-icone"
+          aria-label="Pesquisar endereço"
+        >
+          🔍
+        </button>
+      </form>
 
-        <strong>Modos de Traçado:</strong><br><br>
-        🖱️ <b>Clique:</b> Segue as ruas<br>
-        ⇧ <b>Shift + Clique:</b> Reta livre (Tracejada)<br>
-        🖱️ <b>Botão Direito na linha:</b> Adiciona ponto de edição<br>
-        ⎌ <b>Ctrl + Z:</b> Desfazer último trecho<br><br>
-        
-        <!-- Painel de Estatísticas -->
-        <div style="margin-bottom: 15px; font-size: 15px; background: #f0f0f0; padding: 8px; border-radius: 4px; text-align: center; line-height: 1.5;">
-            📏 <strong>Distância:</strong> <span id="distancia-total">0.00</span> km<br>
-            📍 <strong>Pontos:</strong> <span id="contador-pontos">0</span><br>
-            🌐 <strong>Requisições API:</strong> <span id="contador-api">0</span>
-        </div>
-        
-        <button id="btn-exportar" style="width: 100%; padding: 8px; margin-bottom: 8px; cursor: pointer; background-color: #4CAF50; color: white; border: none; border-radius: 4px; font-weight: bold;">📥 Baixar .GPX</button>
-        <button id="btn-limpar" style="width: 100%; padding: 8px; cursor: pointer; background-color: #ff4c4c; color: white; border: none; border-radius: 4px; font-weight: bold;">🗑️ Apagar Tudo</button>
+      <h2 class="secao-titulo">Como desenhar</h2>
+      <ul class="ajuda">
+        <li>🖱️ <b>Clique:</b> segue as ruas</li>
+        <li>⇧ <b>Shift + clique:</b> reta livre (tracejada)</li>
+        <li>🖱️ <b>Botão direito na linha:</b> insere um ponto</li>
+        <li>✏️ <b>Lápis:</b> desenho livre (arraste para desenhar)</li>
+        <li>⌨️ <b>1 / 2 / 3:</b> Rua / Livre / Lápis</li>
+        <li>⌨️ <b>Espaço:</b> arrastar o mapa no modo lápis</li>
+        <li>⌨️ <b>Ctrl + Z:</b> desfazer último passo</li>
+      </ul>
+
+      <div class="estatisticas" aria-label="Estatísticas da rota">
+        <span>📏 <strong>Distância:</strong> <span id="distancia-total">0.00</span> km</span>
+        <span>📍 <strong>Pontos:</strong> <span id="contador-pontos">0</span></span>
+        <span>🌐 <strong>Requisições:</strong> <span id="contador-api">0</span></span>
+      </div>
+
+      <label class="campo-nome" for="input-nome-rota">
+        <span>Nome da rota</span>
+        <input
+          type="text"
+          id="input-nome-rota"
+          maxlength="80"
+          placeholder="Strava Art Route"
+          autocomplete="off"
+        />
+      </label>
+
+      <button type="button" id="btn-exportar" class="btn btn-primario">📥 Baixar .GPX</button>
+      <button type="button" id="btn-limpar" class="btn btn-perigo">🗑️ Apagar tudo</button>
     </div>
 
-    <div id="toolbar" class="toolbar">
-        <button id="btn-ferramenta-rua" class="btn-ferramenta ativo" title="Modo Rua (Atalho: Tecla 1)">
-            🛣️ Rua
-        </button>
-        <button id="btn-ferramenta-livre" class="btn-ferramenta" title="Modo Livre (Atalho: Tecla 2 ou Shift)">
-            🦅 Livre
-        </button>
-        <button id="btn-ferramenta-lapis" class="btn-ferramenta" title="Modo Lápis Inteligente (Atalho: Tecla 3)">
-            ✏️ Lápis
-        </button>
+    <div id="toolbar" class="toolbar" role="toolbar" aria-label="Modo de desenho">
+      <button
+        type="button"
+        class="btn-ferramenta ativo"
+        data-ferramenta="rua"
+        aria-pressed="true"
+        title="Modo Rua (atalho: 1)"
+      >
+        🛣️ <span>Rua</span>
+      </button>
+      <button
+        type="button"
+        class="btn-ferramenta"
+        data-ferramenta="livre"
+        aria-pressed="false"
+        title="Modo Livre (atalho: 2 ou Shift)"
+      >
+        🦅 <span>Livre</span>
+      </button>
+      <button
+        type="button"
+        class="btn-ferramenta"
+        data-ferramenta="lapis"
+        aria-pressed="false"
+        title="Modo Lápis (atalho: 3)"
+      >
+        ✏️ <span>Lápis</span>
+      </button>
     </div>
 
-    <div id="map"></div>
-    
-    <!-- Scripts da Ferramenta -->
-    <script type="module" src="js/persistence.js"></script>
-    <script type="module" src="js/state.js"></script>
-    <script type="module" src="js/api.js"></script>
-    <script type="module" src="js/mapa.js"></script>
-    <script type="module" src="js/previsao.js"></script>
-    <script type="module" src="js/exportacao.js"></script>
-    <script type="module" src="js/lapis.js"></script>
-</body>
+    <div id="status" class="status" role="status" aria-live="polite" hidden></div>
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+
+    <div id="map" role="region" aria-label="Mapa para desenhar a rota"></div>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
 </html>

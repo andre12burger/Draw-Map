@@ -1,0 +1,9 @@
+node_modules/
+.cline-home/
+public/vendor/
+coverage/
+playwright-report/
+test-results/
+package-lock.json
+repomix-output.xml
+docs/RELATORIO.md

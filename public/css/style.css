@@ -1,206 +1,450 @@
+:root {
+  --vermelho: #e53935;
+  --vermelho-escuro: #b71c1c;
+  --azul: #1565c0;
+  --laranja: #e65100;
+  --texto: #202124;
+  --texto-suave: #5f6368;
+  --borda: #dadce0;
+  --fundo: #ffffff;
+  --sombra: 0 6px 20px rgba(0, 0, 0, 0.22);
+  --raio: 10px;
+  --z-painel: 1000;
+  --z-flutuante: 1100;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
 body {
-    margin: 0;
-    padding: 0;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  color: var(--texto);
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+}
+
+[hidden] {
+  display: none !important;
 }
 
 #map {
-    width: 100vw;
-    height: 100vh;
+  width: 100vw;
+  height: 100vh;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ==========================================
+   PAINEL LATERAL
+   ========================================== */
 #legenda {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    background-color: white;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-    font-family: sans-serif;
-    font-size: 14px;
-    line-height: 1.5;
-    z-index: 1000; /* Mantém a legenda acima do mapa */
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: var(--z-painel);
+  width: min(340px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  padding: 14px;
+  border-radius: var(--raio);
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: var(--sombra);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
-/* Estilo para os marcadores arrastáveis */
-.marcador-custom {
-    background-color: black;
-    border: 2px solid white;
-    border-radius: 50%;
-    box-shadow: 0 0 4px rgba(0,0,0,0.5);
-    cursor: grab;
+.secao-titulo {
+  margin: 12px 0 6px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--texto-suave);
 }
 
-.marcador-custom:active {
-    cursor: grabbing;
+.ajuda {
+  margin: 0 0 12px;
+  padding-left: 18px;
 }
 
-.marcador-livre {
-    background-color: #2196F3; /* Azul para pontos com Shift */
+.ajuda li {
+  margin-bottom: 2px;
 }
 
-/* Estilo para a bolinha de preview (fantasma) */
-.marcador-previa {
-    background-color: black;
-    border: 2px solid white;
-    border-radius: 50%;
-    box-shadow: 0 0 4px rgba(0,0,0,0.5);
-    opacity: 0.4;
-    pointer-events: none !important; 
+.estatisticas {
+  display: grid;
+  gap: 3px;
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f1f3f4;
+  font-size: 13px;
 }
 
-.marcador-previa-livre {
-    background-color: #2196F3;
+.campo-nome {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: var(--texto-suave);
 }
 
-/* ==========================================
-   BARRA DE FERRAMENTAS LATERAL
-   ========================================== */
-.toolbar {
-    position: absolute;
-    left: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 1000; /* Fica acima do mapa do Leaflet */
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    background: white;
-    padding: 10px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-}
-
-.btn-ferramenta {
-    padding: 12px 15px;
-    border: 2px solid transparent;
-    background: #f8f9fa;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 14px;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.btn-ferramenta:hover:not(:disabled) {
-    background: #e9ecef;
-}
-
-/* Estado Ativo: Modo Rua */
-#btn-ferramenta-rua.ativo {
-    border-color: #F44336;
-    background: #ffebee;
-    color: #c62828;
-}
-
-/* Estado Ativo: Modo Livre */
-#btn-ferramenta-livre.ativo {
-    border-color: #2196F3;
-    background: #e3f2fd;
-    color: #1565c0;
-}
-
-.btn-ferramenta:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-    filter: grayscale(100%);
-}
-
-/* Cursor para o Modo Lápis */
-.cursor-lapis {
-    cursor: crosshair !important;
+.campo-nome input {
+  width: 100%;
+  padding: 7px 8px;
+  border: 1px solid var(--borda);
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--texto);
 }
 
 /* ==========================================
-   MARCADORES DE KM E GRÁFICO
+   BUSCA DE ENDEREÇO
    ========================================== */
-.marcador-km {
-    background-color: white;
-    color: black;
-    border: 2px solid black;
-    border-radius: 50%;
-    text-align: center;
-    font-size: 11px;
-    font-weight: bold;
-    line-height: 18px; /* Centraliza o texto verticalmente num círculo 20x20 */
-    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+.busca {
+  display: flex;
+  gap: 6px;
 }
 
-#painel-grafico {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100vw;
-    height: 150px;
-    background: rgba(255, 255, 255, 0.95);
-    border-top: 2px solid #ccc;
-    z-index: 1000; /* Fica sobre o mapa */
-    padding: 10px;
-    box-sizing: border-box;
-    display: none; /* Só aparece quando há rota desenhada */
+.busca__campo {
+  position: relative;
+  flex: 1;
 }
 
-/* Estado Ativo: Modo Lápis */
-#btn-ferramenta-lapis.ativo {
-    border-color: #FF9800;
-    background: #fff3e0;
-    color: #e65100;
+.busca input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--borda);
+  border-radius: 6px;
+  font-size: 13px;
 }
 
-/* Nova regra para garantir que o traço fantasma do Lápis não bloqueie cliques no mapa */
-.rabisco-fantasma {
-    pointer-events: none !important;
+.btn-icone {
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--azul);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
 }
 
-/* Refatoração do Marcador KM para suportar tamanhos que mudam com o Zoom */
-.marcador-km {
-    background-color: white;
-    color: black;
-    border: 2px solid black;
-    border-radius: 50%;
-    font-weight: bold;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.btn-icone:disabled {
+  opacity: 0.55;
+  cursor: wait;
 }
 
-/* ==========================================
-   AUTOCOMPLETE DE ENDEREÇO
-   ========================================== */
 .sugestoes-box {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    width: 100%;
-    background: white;
-    border: 1px solid #ccc;
-    border-top: none;
-    border-radius: 0 0 4px 4px;
-    max-height: 200px;
-    overflow-y: auto;
-    z-index: 1001; /* Fica acima de tudo */
-    display: none;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  z-index: var(--z-flutuante);
+  width: 100%;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--borda);
+  border-radius: 6px;
+  background: var(--fundo);
+  box-shadow: var(--sombra);
 }
 
 .sugestao-item {
-    padding: 8px 10px;
-    font-size: 12px;
-    cursor: pointer;
-    border-bottom: 1px solid #eee;
-    color: #333;
-    line-height: 1.4;
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-bottom: 1px solid #f1f3f4;
+  background: transparent;
+  color: var(--texto);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
 }
 
-.sugestao-item:hover {
-    background-color: #f0f8ff;
-    color: #000;
+.sugestao-item:hover,
+.sugestao-item.ativo {
+  background: #e8f0fe;
 }
 
 .sugestao-item:last-child {
-    border-bottom: none;
+  border-bottom: 0;
+}
+
+/* ==========================================
+   BOTÕES
+   ========================================== */
+.btn {
+  width: 100%;
+  padding: 8px;
+  margin-top: 6px;
+  border: 0;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-primario {
+  background: #2e7d32;
+}
+
+.btn-primario:hover {
+  background: #1b5e20;
+}
+
+.btn-perigo {
+  background: #d32f2f;
+}
+
+.btn-perigo:hover {
+  background: var(--vermelho-escuro);
+}
+
+.btn:focus-visible,
+.btn-icone:focus-visible,
+.btn-ferramenta:focus-visible,
+input:focus-visible {
+  outline: 3px solid #1a73e8;
+  outline-offset: 2px;
+}
+
+/* ==========================================
+   BARRA DE FERRAMENTAS
+   ========================================== */
+.toolbar {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  z-index: var(--z-painel);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border-radius: var(--raio);
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: var(--sombra);
+  transform: translateY(-50%);
+}
+
+.btn-ferramenta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 2px solid transparent;
+  border-radius: 7px;
+  background: #f8f9fa;
+  color: var(--texto);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.btn-ferramenta:hover {
+  background: #e9ecef;
+}
+
+.btn-ferramenta[data-ferramenta='rua'].ativo {
+  border-color: var(--vermelho);
+  background: #ffebee;
+  color: var(--vermelho-escuro);
+}
+
+.btn-ferramenta[data-ferramenta='livre'].ativo {
+  border-color: #1e88e5;
+  background: #e3f2fd;
+  color: var(--azul);
+}
+
+.btn-ferramenta[data-ferramenta='lapis'].ativo {
+  border-color: #fb8c00;
+  background: #fff3e0;
+  color: var(--laranja);
+}
+
+.cursor-lapis {
+  cursor: crosshair !important;
+}
+
+/* ==========================================
+   MARCADORES
+   ========================================== */
+.marcador-custom {
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #111;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.55);
+  cursor: grab;
+}
+
+.marcador-custom:active {
+  cursor: grabbing;
+}
+
+.marcador-livre {
+  background: #1e88e5;
+}
+
+.marcador-previa {
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #111;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.55);
+  opacity: 0.4;
+  pointer-events: none !important;
+}
+
+.marcador-previa-livre {
+  background: #1e88e5;
+}
+
+.marcador-km {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #111;
+  border-radius: 50%;
+  background: #fff;
+  color: #111;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+}
+
+.rabisco-fantasma {
+  pointer-events: none !important;
+}
+
+/* ==========================================
+   STATUS E TOASTS
+   ========================================== */
+.status {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  z-index: var(--z-flutuante);
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(32, 33, 36, 0.92);
+  color: #fff;
+  font-size: 13px;
+  transform: translateX(-50%);
+  box-shadow: var(--sombra);
+}
+
+body.ocupado #map {
+  cursor: progress;
+}
+
+.toasts {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  z-index: var(--z-flutuante);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(420px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.toast {
+  padding: 10px 14px;
+  border-left: 5px solid #5f6368;
+  border-radius: 8px;
+  background: #202124;
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.4;
+  box-shadow: var(--sombra);
+  cursor: pointer;
+  pointer-events: auto;
+  animation: toast-entrar 0.18s ease-out;
+}
+
+.toast--sucesso {
+  border-left-color: #4caf50;
+}
+
+.toast--aviso {
+  border-left-color: #ffb300;
+}
+
+.toast--erro {
+  border-left-color: #ef5350;
+}
+
+.toast--saindo {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+@keyframes toast-entrar {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==========================================
+   RESPONSIVO
+   ========================================== */
+@media (max-width: 720px) {
+  #legenda {
+    top: 10px;
+    right: 10px;
+    width: calc(100vw - 20px);
+    max-height: 46vh;
+    padding: 12px;
+  }
+
+  .ajuda {
+    display: none;
+  }
+
+  .toolbar {
+    top: auto;
+    bottom: 24px;
+    left: 10px;
+    flex-direction: row;
+    transform: none;
+  }
+
+  .btn-ferramenta span {
+    display: none;
+  }
+
+  .toasts {
+    bottom: 90px;
+  }
 }

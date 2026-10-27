@@ -1,0 +1,7 @@
+* text=auto eol=lf
+
+# Assets de terceiros: não normalizar EOL nem inspecionar diff textual
+public/vendor/** -text -diff
+*.png binary
+*.jpg binary
+*.gif binary
