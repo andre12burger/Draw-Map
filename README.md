@@ -140,6 +140,54 @@ Headers: `X-Cache: HIT|MISS`, `Cache-Control: public, max-age=86400`.
 | `422`                 | Nenhuma rota encontrada                        |
 | `502` / `503` / `504` | Falha, rate limit ou timeout do upstream       |
 
+### `POST /api/route-points`
+
+Roteamento multi-ponto (2–25 pontos) com validação de cada perna e cache de 500 entradas.
+
+```json
+{
+  "points": [
+    [-32.03, -52.1],
+    [-32.031, -52.101],
+    [-32.032, -52.102]
+  ],
+  "profile": "bike"
+}
+```
+
+- `points`: pares `[lat, lng]` (2 a 25), cada perna ≤ **8000 m** (Haversine).
+- `profile`: `bike` (→ `fastbike`) ou `foot` (→ `hiking-beta`); aliases `bicycle`, `trekking`, `hiking`.
+- Timeout de 8 s por perna e orçamento total de 25 s; erros 4xx do BRouter viram `422`.
+- Resposta:
+
+```json
+{
+  "coordinates": [
+    [-32.03, -52.1],
+    [-32.031, -52.101],
+    [-32.032, -52.102]
+  ],
+  "distance_m": 222,
+  "duration_s": 84,
+  "snapped_waypoints": [
+    [-32.03, -52.1],
+    [-32.031, -52.101],
+    [-32.032, -52.102]
+  ],
+  "legs": [{ "distance_m": 111, "duration_s": 42 }],
+  "profile": "fastbike"
+}
+```
+
+| Status        | Quando                                          |
+| ------------- | ----------------------------------------------- |
+| `200`         | Rota calculada (com `X-Cache: HIT` ou `MISS`)   |
+| `400`         | Lista/perfil/JSON inválidos                     |
+| `422`         | Perna > 8000 m ou upstream sem rota             |
+| `502` / `504` | Geometria inválida, falha ou timeout do BRouter |
+
+Documentação detalhada das funções geodésicas e dos módulos de formas/imagem: [`docs/API-GEO.md`](docs/API-GEO.md).
+
 ---
 
 ## 🧪 Testes e qualidade
@@ -180,22 +228,25 @@ server/
   app.js              # fábrica Express (helmet, CSP, compressão, rate limit)
   index.js            # bootstrap + encerramento gracioso
   config.js           # configuração por ambiente
-  lib/{cache,http,validators}.js
+  lib/{cache,geo,http,validators}.js
   routes/{geocode,route,health}.js
 public/
   index.html
   css/style.css
   js/
     main.js
-    core/{state,history,persistence,utils}.js
+    core/{state,history,persistence,utils,geo}.js
     services/api.js
-    map/{map,render,draw,pencil,preview,distance}.js
+    map/{map,render,draw,pencil,preview,distance,shapes,image-overlay}.js
     ui/{toolbar,search,stats,toast}.js
     export/gpx.js
   vendor/leaflet/     # gerado por npm run vendor/postinstall
 tests/
   unit/               # Vitest
   e2e/                # Playwright
+docs/
+  API-GEO.md          # funções geodésicas, alças, imagem e endpoint multi-ponto
+  REVERSE-ENGINEERING-DRAWMYLOOP.md
 ```
 
 ---

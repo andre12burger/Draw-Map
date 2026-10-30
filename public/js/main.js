@@ -16,6 +16,13 @@ import {
   limparTudo,
 } from './map/draw.js';
 import { inicializarPencil } from './map/pencil.js';
+import { criarForma, inicializarFormas } from './map/shapes.js';
+import {
+  definirOpacidade,
+  inicializarImagemReferencia,
+  mostrarImagem,
+  removerImagem,
+} from './map/image-overlay.js';
 import { inicializarPreview } from './map/preview.js';
 import { inicializarToolbar } from './ui/toolbar.js';
 import { inicializarBusca } from './ui/search.js';
@@ -87,6 +94,84 @@ inicializarBusca();
 inicializarPencil();
 inicializarPreview();
 inicializarExportacao();
+inicializarFormas();
+inicializarImagemReferencia();
+
+// --- Formas geométricas e imagem de referência -------------------------------
+
+let urlImagemReferencia = null;
+
+const controloOpacidade = document.getElementById('controlo-opacidade');
+const inputOpacidade = document.getElementById('input-opacidade');
+const inputImagem = document.getElementById('input-imagem');
+
+document.getElementById('btn-forma')?.addEventListener('click', () => {
+  const centro = mapa.getCenter();
+  const forma = criarForma({
+    shape: 'estrela',
+    center: { lat: centro.lat, lng: centro.lng },
+    size: 2000,
+    interativa: true,
+    callbacks: {
+      onTransformEnd: () => {
+        mostrarToast('Forma atualizada.', { tipo: 'info', duracao: 1500 });
+      },
+    },
+  });
+
+  if (forma) {
+    mostrarToast('Forma inserida. Arraste as alças para transformar.', {
+      tipo: 'info',
+      duracao: 3000,
+    });
+  }
+});
+
+document.getElementById('btn-imagem')?.addEventListener('click', () => inputImagem?.click());
+
+inputImagem?.addEventListener('change', () => {
+  const arquivo = inputImagem.files?.[0];
+  if (!arquivo) return;
+
+  if (urlImagemReferencia) URL.revokeObjectURL(urlImagemReferencia);
+  urlImagemReferencia = URL.createObjectURL(arquivo);
+
+  const centro = mapa.getCenter();
+  const opacidade = Number(inputOpacidade?.value ?? 50) / 100;
+
+  void mostrarImagem({
+    url: urlImagemReferencia,
+    center: { lat: centro.lat, lng: centro.lng },
+    size: 2000,
+    opacity: opacidade,
+    callbacks: {
+      onTransformEnd: () => mostrarToast('Imagem ajustada.', { tipo: 'info', duracao: 1500 }),
+    },
+  }).then((imagem) => {
+    if (!imagem) {
+      mostrarToast('Não foi possível carregar a imagem.', { tipo: 'erro' });
+      return;
+    }
+    if (controloOpacidade) controloOpacidade.hidden = false;
+    mostrarToast('Imagem de referência carregada.', { tipo: 'sucesso', duracao: 2000 });
+  });
+
+  inputImagem.value = '';
+});
+
+inputOpacidade?.addEventListener('input', () => {
+  definirOpacidade(Number(inputOpacidade.value) / 100);
+});
+
+document.getElementById('btn-remover-imagem')?.addEventListener('click', () => {
+  if (!removerImagem()) return;
+  if (urlImagemReferencia) {
+    URL.revokeObjectURL(urlImagemReferencia);
+    urlImagemReferencia = null;
+  }
+  if (controloOpacidade) controloOpacidade.hidden = true;
+  mostrarToast('Imagem de referência removida.', { tipo: 'info', duracao: 1500 });
+});
 
 inscreverContadorRequisicoes(atualizarContadorApi);
 

@@ -1,26 +1,53 @@
 /**
  * @file map/pencil.js
- * @description Ferramenta de desenho livre (lápis). Corrige os travamentos do
- * fluxo antigo ao finalizar o traço no `document` (mesmo fora do mapa), tratar a
- * barra de espaço sem acionar botões focados e resetar o estado no `blur`.
+ * @description Ferramenta de desenho livre (lápis).
+ *
+ * Regras replicadas do DrawMyLoop (relatório §3):
+ * - filtro de 2 px entre pontos e deteção de arrasto real (> 1 px desde o início);
+ * - clique simples adiciona um waypoint; arrasto contínuo gera um traço;
+ * - simplificação por Douglas-Peucker **métrico** com tolerância adaptativa
+ *   (`clamp(L/500, 5, 50)`) em vez de tolerância em pixels;
+ * - reconstrução de alças (`reconstruirAlcas`): DP 12 m + viragem ≥ 55° +
+ *   espaçamento mínimo de 8 m + limite de 120 alças;
+ * - repaint do traço agendado em `requestAnimationFrame` (um por frame);
+ * - guarda de 500 ms entre gestos, `Escape` cancela e `Space` devolve o pan;
+ * - toque: 1 dedo desenha, 2 dedos cancelam o traço (pinch).
  */
 
 import { getCampo } from '../core/state.js';
 import { getMap, obterEstilosDinamicos } from './map.js';
-import { processarLoteLapis } from './draw.js';
+import { adicionarPonto, estaOcupado, processarLoteLapis } from './draw.js';
+import { reconstruirAlcas, resample, simplifyTrace } from '../core/geo.js';
 import { ehCampoEditavel } from '../core/utils.js';
 import { mostrarToast } from '../ui/toast.js';
 
-const DISTANCIA_MINIMA_PIXELS = 2;
-const TOLERANCIA_SIMPLIFICACAO_PIXELS = 12;
-const DISTANCIA_MAXIMA_METROS = 40;
-const MAX_PONTOS_ESTRATEGICOS = 400;
+/** Limiares do gesto (exportados para testes). */
+export const CONFIG_LAPIS = Object.freeze({
+  distanciaMinimaPixels: 2,
+  distanciaArrastoPixels: 1,
+  intervaloGestoMs: 500,
+  passoMaximoMetros: 40,
+  maxPontosEstrategicos: 400,
+  maxAlcas: 120,
+  espacamentoMinimoAlcasMetros: 8,
+  toleranciaAlcasMetros: 12,
+});
+
+const raf =
+  typeof globalThis.requestAnimationFrame === 'function'
+    ? globalThis.requestAnimationFrame.bind(globalThis)
+    : (callback) => setTimeout(() => callback(Date.now()), 16);
 
 let inicializado = false;
 let desenhando = false;
+let arrastou = false;
 let pontosDecalque = [];
 let polylineDecalque = null;
 let espacoPressionado = false;
+let quadroAgendado = null;
+let ultimoFimGestoS = 0;
+let pontoInicialContainer = null;
+let toqueComMultiplosDedos = false;
 
 function ferramentaLapisAtiva() {
   return getCampo('ferramentaAtiva') === 'lapis';
@@ -30,79 +57,203 @@ function permiteArrastar() {
   return !ferramentaLapisAtiva() || espacoPressionado;
 }
 
+/**
+ * Ativa/desativa interações do mapa incompatíveis com o desenho. `Space`
+ * devolve temporariamente o pan.
+ */
 function sincronizarArrasto() {
   const mapa = getMap();
-  if (permiteArrastar()) mapa.dragging.enable();
-  else mapa.dragging.disable();
+  const desenhoAtivo = ferramentaLapisAtiva() && !espacoPressionado;
+
+  if (permiteArrastar()) {
+    mapa.dragging.enable();
+  } else {
+    mapa.dragging.disable();
+  }
+
+  mapa.getContainer().classList.toggle('cursor-lapis', desenhoAtivo);
+
+  const alternar = (handler, ativo) => {
+    if (!handler) return;
+    if (ativo) handler.disable();
+    else handler.enable();
+  };
+
+  alternar(mapa.doubleClickZoom, desenhoAtivo);
+  alternar(mapa.boxZoom, desenhoAtivo);
+  alternar(mapa.keyboard, desenhoAtivo);
 }
 
 function removerPolyline() {
+  if (quadroAgendado !== null) {
+    if (typeof globalThis.cancelAnimationFrame === 'function') {
+      globalThis.cancelAnimationFrame(quadroAgendado);
+    }
+    quadroAgendado = null;
+  }
+
   if (polylineDecalque) {
     getMap().removeLayer(polylineDecalque);
     polylineDecalque = null;
   }
 }
 
-function cancelarDesenho() {
+function limparEstadoDesenho() {
   desenhando = false;
+  arrastou = false;
   pontosDecalque = [];
+  pontoInicialContainer = null;
+  toqueComMultiplosDedos = false;
   removerPolyline();
 }
 
-/**
- * Simplifica o traço em pixels e subdivide trechos longos para que o roteador
- * não "corte caminho" entre vértices distantes.
- * @param {L.LatLng[]} pontosBrutos
- * @returns {Array<{lat:number,lng:number}>}
- */
-export function prepararPontosEstrategicos(pontosBrutos) {
+function cancelarDesenho() {
+  limparEstadoDesenho();
+  ultimoFimGestoS = Date.now();
+}
+
+function agendarAtualizacao() {
+  if (quadroAgendado !== null) return;
+
+  quadroAgendado = raf(() => {
+    quadroAgendado = null;
+    if (polylineDecalque) polylineDecalque.setLatLngs(pontosDecalque);
+  });
+}
+
+function distanciaContainer(a, b) {
   const mapa = getMap();
-  const pontosPixel = pontosBrutos.map((ponto) => mapa.project(ponto));
-  const esquinas = L.LineUtil.simplify(pontosPixel, TOLERANCIA_SIMPLIFICACAO_PIXELS).map((ponto) =>
-    mapa.unproject(ponto),
-  );
+  return mapa.latLngToContainerPoint(a).distanceTo(mapa.latLngToContainerPoint(b));
+}
 
-  const estrategicos = [];
+/**
+ * Regista um ponto do traço respeitando o filtro de 2 px.
+ * @param {L.LatLng} latlng
+ */
+function registarPonto(latlng) {
+  const ultimo = pontosDecalque[pontosDecalque.length - 1];
 
-  for (let i = 0; i < esquinas.length - 1; i += 1) {
-    const atual = esquinas[i];
-    const proximo = esquinas[i + 1];
-    estrategicos.push({ lat: atual.lat, lng: atual.lng });
-
-    const distancia = atual.distanceTo(proximo);
-    if (distancia > DISTANCIA_MAXIMA_METROS) {
-      const fracoes = Math.ceil(distancia / DISTANCIA_MAXIMA_METROS);
-      for (let j = 1; j < fracoes; j += 1) {
-        const proporcao = j / fracoes;
-        estrategicos.push({
-          lat: atual.lat + (proximo.lat - atual.lat) * proporcao,
-          lng: atual.lng + (proximo.lng - atual.lng) * proporcao,
-        });
-      }
-    }
+  if (ultimo && distanciaContainer(ultimo, latlng) < CONFIG_LAPIS.distanciaMinimaPixels) {
+    return;
   }
 
-  const ultimo = esquinas[esquinas.length - 1];
-  if (ultimo) estrategicos.push({ lat: ultimo.lat, lng: ultimo.lng });
+  if (
+    !arrastou &&
+    pontoInicialContainer &&
+    distanciaContainer(pontosDecalque[0], latlng) > CONFIG_LAPIS.distanciaArrastoPixels
+  ) {
+    arrastou = true;
+  }
 
-  return estrategicos;
+  pontosDecalque.push(latlng);
+  agendarAtualizacao();
+}
+
+function iniciarDesenho(latlng) {
+  const mapa = getMap();
+  const { pesoLinha } = obterEstilosDinamicos();
+
+  limparEstadoDesenho();
+  desenhando = true;
+  pontosDecalque = [latlng];
+  pontoInicialContainer = mapa.latLngToContainerPoint(latlng);
+
+  polylineDecalque = L.polyline(pontosDecalque, {
+    color: '#607d8b',
+    weight: pesoLinha,
+    opacity: 0.7,
+    dashArray: '5, 5',
+    className: 'rabisco-fantasma',
+    interactive: false,
+  }).addTo(mapa);
+}
+
+/**
+ * Simplifica o traço em metros (DP adaptativo) e densifica para o roteador não
+ * "cortar caminho" entre vértices distantes.
+ * @param {Array<{lat:number,lng:number}|L.LatLng|number[]>} pontosBrutos
+ * @param {{toleranciaMetros?:number, passoMaximoMetros?:number}} [opcoes]
+ * @returns {Array<{lat:number,lng:number}>}
+ */
+export function prepararPontosEstrategicos(
+  pontosBrutos,
+  { toleranciaMetros, passoMaximoMetros = CONFIG_LAPIS.passoMaximoMetros } = {},
+) {
+  if (!Array.isArray(pontosBrutos) || pontosBrutos.length < 2) return [];
+
+  const pontos = pontosBrutos
+    .map((ponto) => {
+      if (Array.isArray(ponto)) return [Number(ponto[0]), Number(ponto[1])];
+      return [Number(ponto?.lat), Number(ponto?.lng)];
+    })
+    .filter(([lat, lng]) => Number.isFinite(lat) && Number.isFinite(lng));
+
+  if (pontos.length < 2) return [];
+
+  const simplificados = simplifyTrace(pontos, toleranciaMetros);
+  const { handles } = reconstruirAlcas(simplificados);
+  const base = handles.length >= 2 ? handles : simplificados;
+
+  return resample(base, passoMaximoMetros).map(([lat, lng]) => ({ lat, lng }));
+}
+
+/**
+ * Reconstrói alças editáveis (equivalente ao `ek` do DrawMyLoop).
+ * @param {Array<{lat:number,lng:number}|L.LatLng|number[]>} pontosBrutos
+ * @param {{maxHandles?:number, minSpacingMeters?:number, toleranceMeters?:number}} [opcoes]
+ * @returns {Array<{lat:number,lng:number}>}
+ */
+export function prepararAlcas(pontosBrutos, opcoes = {}) {
+  if (!Array.isArray(pontosBrutos) || pontosBrutos.length === 0) return [];
+
+  const pontos = pontosBrutos
+    .map((ponto) => {
+      if (Array.isArray(ponto)) return [Number(ponto[0]), Number(ponto[1])];
+      return [Number(ponto?.lat), Number(ponto?.lng)];
+    })
+    .filter(([lat, lng]) => Number.isFinite(lat) && Number.isFinite(lng));
+
+  const { handles } = reconstruirAlcas(pontos, {
+    maxHandles: opcoes.maxHandles ?? CONFIG_LAPIS.maxAlcas,
+    minSpacingMeters: opcoes.minSpacingMeters ?? CONFIG_LAPIS.espacamentoMinimoAlcasMetros,
+    toleranceMeters: opcoes.toleranceMeters ?? CONFIG_LAPIS.toleranciaAlcasMetros,
+  });
+
+  return handles.map(([lat, lng]) => ({ lat, lng }));
 }
 
 async function finalizarDesenho() {
   if (!desenhando) return;
 
+  const pontos = pontosDecalque.slice();
+  const foiArrasto = arrastou && pontos.length > 2;
+
   desenhando = false;
-  sincronizarArrasto();
-
-  const pontos = pontosDecalque;
+  arrastou = false;
   pontosDecalque = [];
+  pontoInicialContainer = null;
   removerPolyline();
+  sincronizarArrasto();
+  ultimoFimGestoS = Date.now();
 
-  if (pontos.length < 2) return;
+  if (estaOcupado()) {
+    mostrarToast('Aguarde o cálculo anterior terminar.', { tipo: 'aviso', duracao: 2000 });
+    return;
+  }
+
+  if (!foiArrasto) {
+    const ponto = pontos[pontos.length - 1];
+    if (!ponto) return;
+    // Clique simples = um waypoint (com snap para a via), não um traço.
+    await adicionarPonto({ lat: ponto.lat, lng: ponto.lng }, false);
+    return;
+  }
 
   const estrategicos = prepararPontosEstrategicos(pontos);
 
-  if (estrategicos.length > MAX_PONTOS_ESTRATEGICOS) {
+  if (estrategicos.length < 2) return;
+
+  if (estrategicos.length > CONFIG_LAPIS.maxPontosEstrategicos) {
     mostrarToast('Desenho muito grande. Divida o traço em partes menores.', {
       tipo: 'aviso',
     });
@@ -128,39 +279,30 @@ export function inicializarPencil() {
 
   mapa.on('mousedown', (evento) => {
     if (!ferramentaLapisAtiva()) return;
-    if (evento.originalEvent?.button !== 0) return;
+
+    const original = evento.originalEvent;
+    if (original?.button !== 0) return;
     if (espacoPressionado) return;
-    // Não inicia um traço ao tentar arrastar um marcador existente.
-    if (evento.originalEvent?.target?.closest?.('.leaflet-marker-icon')) return;
+    if (
+      original?.target?.closest?.(
+        '.leaflet-marker-icon, .leaflet-control, .leaflet-popup-content-wrapper, .leaflet-interactive',
+      )
+    ) {
+      return;
+    }
+    if (Date.now() - ultimoFimGestoS < CONFIG_LAPIS.intervaloGestoMs) return;
 
-    mapa.dragging.disable();
-    desenhando = true;
-    pontosDecalque = [evento.latlng];
+    if (estaOcupado()) {
+      mostrarToast('Aguarde o cálculo anterior terminar.', { tipo: 'aviso', duracao: 2000 });
+      return;
+    }
 
-    const { pesoLinha } = obterEstilosDinamicos();
-    polylineDecalque = L.polyline(pontosDecalque, {
-      color: '#607d8b',
-      weight: pesoLinha,
-      opacity: 0.7,
-      dashArray: '5, 5',
-      className: 'rabisco-fantasma',
-      interactive: false,
-    }).addTo(mapa);
+    iniciarDesenho(evento.latlng);
   });
 
   mapa.on('mousemove', (evento) => {
     if (!desenhando || !ferramentaLapisAtiva()) return;
-
-    const ultimo = pontosDecalque[pontosDecalque.length - 1];
-    if (ultimo) {
-      const distancia = mapa
-        .latLngToContainerPoint(ultimo)
-        .distanceTo(mapa.latLngToContainerPoint(evento.latlng));
-      if (distancia < DISTANCIA_MINIMA_PIXELS) return;
-    }
-
-    pontosDecalque.push(evento.latlng);
-    if (polylineDecalque) polylineDecalque.setLatLngs(pontosDecalque);
+    registarPonto(evento.latlng);
   });
 
   // Finaliza mesmo se o botão for solto fora do mapa.
@@ -169,7 +311,67 @@ export function inicializarPencil() {
     void finalizarDesenho();
   });
 
+  const contentor = mapa.getContainer();
+
+  contentor.addEventListener(
+    'touchstart',
+    (evento) => {
+      if (!ferramentaLapisAtiva() || espacoPressionado) return;
+
+      if (evento.touches.length >= 2) {
+        toqueComMultiplosDedos = true;
+        if (desenhando) cancelarDesenho();
+        return;
+      }
+      if (estaOcupado()) return;
+
+      evento.preventDefault();
+      iniciarDesenho(mapa.mouseEventToLatLng(evento.touches[0]));
+    },
+    { passive: false },
+  );
+
+  contentor.addEventListener(
+    'touchmove',
+    (evento) => {
+      if (!desenhando) return;
+
+      if (evento.touches.length >= 2) {
+        toqueComMultiplosDedos = true;
+        cancelarDesenho();
+        return;
+      }
+
+      evento.preventDefault();
+      registarPonto(mapa.mouseEventToLatLng(evento.touches[0]));
+    },
+    { passive: false },
+  );
+
+  contentor.addEventListener(
+    'touchend',
+    (evento) => {
+      if (!desenhando) return;
+      if (toqueComMultiplosDedos || evento.touches.length > 0) return;
+
+      evento.preventDefault();
+      void finalizarDesenho();
+    },
+    { passive: false },
+  );
+
+  contentor.addEventListener('touchcancel', () => {
+    if (desenhando) cancelarDesenho();
+  });
+
   window.addEventListener('keydown', (evento) => {
+    if (evento.key === 'Escape' && desenhando) {
+      evento.preventDefault();
+      cancelarDesenho();
+      mostrarToast('Traço cancelado.', { tipo: 'info', duracao: 1500 });
+      return;
+    }
+
     if (evento.code !== 'Space' || evento.repeat) return;
     if (ehCampoEditavel(evento.target)) return;
     if (evento.target?.closest?.('button, a')) return;
@@ -190,6 +392,8 @@ export function inicializarPencil() {
     if (desenhando) cancelarDesenho();
     sincronizarArrasto();
   });
+
+  sincronizarArrasto();
 }
 
 export { sincronizarArrasto };
