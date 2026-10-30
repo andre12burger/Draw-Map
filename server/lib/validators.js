@@ -105,13 +105,87 @@ function validarTermoBusca(termo) {
   return { valido: true, valor: limpo };
 }
 
+const MAX_PONTOS_ROTA = 25;
+const MAX_METROS_POR_PERNA = 8000;
+
+/** Perfis públicos do endpoint multi-ponto → perfis do BRouter. */
+const PERFIS_ROTA = Object.freeze({
+  bike: 'fastbike',
+  bicycle: 'fastbike',
+  fastbike: 'fastbike',
+  trekking: 'trekking',
+  foot: 'hiking-beta',
+  hiking: 'hiking-beta',
+  'hiking-beta': 'hiking-beta',
+});
+
+/**
+ * Valida e normaliza uma lista de pontos `[[lat, lng], ...]` para roteamento.
+ * @param {unknown} pontos
+ * @returns {{valido:true, valor:Array<[number,number]>}|{valido:false, erro:string}}
+ */
+function validarPontosRota(pontos) {
+  if (!Array.isArray(pontos)) {
+    return { valido: false, erro: 'O corpo deve conter "points" como lista de pares [lat, lng].' };
+  }
+  if (pontos.length < 2) {
+    return { valido: false, erro: 'Informe pelo menos dois pontos em "points".' };
+  }
+  if (pontos.length > MAX_PONTOS_ROTA) {
+    return {
+      valido: false,
+      erro: `"points" deve ter no máximo ${MAX_PONTOS_ROTA} pontos por requisição.`,
+    };
+  }
+
+  const normalizados = [];
+
+  for (const ponto of pontos) {
+    if (!Array.isArray(ponto) || ponto.length < 2) {
+      return { valido: false, erro: 'Cada ponto deve ser um par [lat, lng].' };
+    }
+
+    const lat = Number(ponto[0]);
+    const lng = Number(ponto[1]);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return { valido: false, erro: 'Latitude e longitude devem ser números finitos.' };
+    }
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return {
+        valido: false,
+        erro: 'Latitude deve estar em [-90, 90] e longitude em [-180, 180].',
+      };
+    }
+
+    normalizados.push([lat, lng]);
+  }
+
+  return { valido: true, valor: normalizados };
+}
+
+/**
+ * Mapeia o perfil público (`bike`/`foot` e aliases) para o perfil do BRouter.
+ * @param {unknown} perfil
+ * @returns {string|null} `null` quando o perfil não é reconhecido.
+ */
+function mapearPerfilRota(perfil) {
+  if (typeof perfil !== 'string') return null;
+  return PERFIS_ROTA[perfil.trim().toLowerCase()] ?? null;
+}
+
 module.exports = {
   PERFIS_PERMITIDOS,
   PERFIL_PADRAO,
   MAX_PONTOS,
   MAX_TERMO_BUSCA,
+  MAX_PONTOS_ROTA,
+  MAX_METROS_POR_PERNA,
+  PERFIS_ROTA,
   analisarCoordenada,
   validarLonLats,
   normalizarPerfil,
   validarTermoBusca,
+  validarPontosRota,
+  mapearPerfilRota,
 };

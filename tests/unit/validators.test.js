@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  MAX_PONTOS_ROTA,
   analisarCoordenada,
+  mapearPerfilRota,
   normalizarPerfil,
   validarLonLats,
+  validarPontosRota,
   validarTermoBusca,
 } from '../../server/lib/validators.js';
 
@@ -46,6 +49,48 @@ describe('validators', () => {
     expect(validarTermoBusca('a').valido).toBe(false);
     expect(validarTermoBusca('x'.repeat(201)).valido).toBe(false);
     expect(validarTermoBusca('Rio\u0000Grande').valor).toBe('Rio Grande');
+  });
+
+  it('valida listas de pontos para roteamento multi-perna', () => {
+    const valido = validarPontosRota([
+      [-32.03, -52.1],
+      [-32.04, -52.11],
+    ]);
+    expect(valido).toEqual({
+      valido: true,
+      valor: [
+        [-32.03, -52.1],
+        [-32.04, -52.11],
+      ],
+    });
+
+    expect(validarPontosRota('x').valido).toBe(false);
+    expect(validarPontosRota([[-32.03, -52.1]]).valido).toBe(false);
+    expect(validarPontosRota([[-32.03], [-32.04, -52.11]]).valido).toBe(false);
+    expect(
+      validarPontosRota([
+        [999, -52.1],
+        [-32.04, -52.11],
+      ]).valido,
+    ).toBe(false);
+    expect(
+      validarPontosRota([
+        ['a', -52.1],
+        [-32.04, -52.11],
+      ]).valido,
+    ).toBe(false);
+
+    const excesso = Array.from({ length: MAX_PONTOS_ROTA + 1 }, (_, i) => [-32 + i * 0.0001, -52]);
+    expect(validarPontosRota(excesso).valido).toBe(false);
+  });
+
+  it('mapeia perfis públicos para o BRouter', () => {
+    expect(mapearPerfilRota('bike')).toBe('fastbike');
+    expect(mapearPerfilRota('foot')).toBe('hiking-beta');
+    expect(mapearPerfilRota('hiking')).toBe('hiking-beta');
+    expect(mapearPerfilRota(' BIKE ')).toBe('fastbike');
+    expect(mapearPerfilRota('carro')).toBeNull();
+    expect(mapearPerfilRota(undefined)).toBeNull();
   });
 
   it('analisa coordenadas individuais', () => {

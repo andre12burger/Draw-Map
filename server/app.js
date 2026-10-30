@@ -36,6 +36,7 @@ function criarApp() {
           imgSrc: [
             "'self'",
             'data:',
+            'blob:',
             'https://tile.openstreetmap.org',
             'https://*.tile.openstreetmap.org',
           ],
@@ -50,11 +51,12 @@ function criarApp() {
       },
       crossOriginEmbedderPolicy: false,
 
-      referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
     }),
   );
 
   app.use(compression());
+  app.use('/api', express.json({ limit: '64kb' }));
 
   const limitadorApi = rateLimit({
     windowMs: config.rateLimitWindowMs,
@@ -88,8 +90,16 @@ function criarApp() {
   });
 
   app.use((erro, _req, res, _next) => {
-    console.error('[app] erro não tratado:', erro);
     if (res.headersSent) return;
+
+    if (erro?.type === 'entity.parse.failed') {
+      return res.status(400).json({ erro: 'Corpo JSON inválido.' });
+    }
+    if (erro?.type === 'entity.too.large') {
+      return res.status(413).json({ erro: 'Corpo da requisição demasiado grande.' });
+    }
+
+    console.error('[app] erro não tratado:', erro);
     res.status(500).json({ erro: 'Erro interno do servidor.' });
   });
 

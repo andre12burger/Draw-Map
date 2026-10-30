@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { buscarRota, getTotalRequisicoes, obterSnap } from '../../public/js/services/api.js';
+import {
+  buscarRota,
+  getTotalRequisicoes,
+  obterSnap,
+  rotearPontos,
+} from '../../public/js/services/api.js';
 
 function respostaJson(corpo, status = 200) {
   return {
@@ -76,5 +81,64 @@ describe('services/api', () => {
 
     expect(await buscarRota({ lat: 999, lng: 0 }, { lat: 0, lng: 0 })).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('rotearPontos envia POST com points/profile e converte a resposta', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      respostaJson({
+        coordinates: [
+          [-32.03, -52.1],
+          [-32.031, -52.101],
+        ],
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const rota = await rotearPontos(
+      [
+        { lat: -32.03, lng: -52.1 },
+        { lat: -32.031, lng: -52.101 },
+      ],
+      { perfil: 'foot' },
+    );
+
+    expect(rota).toEqual([
+      [-32.03, -52.1, 0],
+      [-32.031, -52.101, 0],
+    ]);
+
+    const [url, opcoes] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/route-points');
+    expect(opcoes.method).toBe('POST');
+    expect(opcoes.headers['Content-Type']).toBe('application/json');
+    expect(JSON.parse(opcoes.body)).toEqual({
+      points: [
+        [-32.03, -52.1],
+        [-32.031, -52.101],
+      ],
+      profile: 'foot',
+    });
+  });
+
+  it('rotearPontos recusa mais de 25 pontos sem chamar a rede', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const pontos = Array.from({ length: 26 }, (_, i) => ({ lat: -32 + i * 0.0001, lng: -52 }));
+    expect(await rotearPontos(pontos)).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('rotearPontos devolve null em erro 400 e não repete', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(respostaJson({ erro: 'x' }, 400));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const rota = await rotearPontos([
+      { lat: -32.03, lng: -52.1 },
+      { lat: -32.031, lng: -52.101 },
+    ]);
+
+    expect(rota).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

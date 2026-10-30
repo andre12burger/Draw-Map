@@ -63,21 +63,29 @@ function combinarSinal(controlador, sinalExterno) {
 
 /**
  * @param {string} url
- * @param {{timeout?:number, contar?:boolean, sinal?:AbortSignal|null}} [opcoes]
+ * @param {{timeout?:number, contar?:boolean, sinal?:AbortSignal|null, metodo?:string, corpo?:any}} [opcoes]
  * @returns {Promise<Response>}
  */
-async function requisitar(url, { timeout = TIMEOUT_MS, contar = true, sinal = null } = {}) {
+async function requisitar(
+  url,
+  { timeout = TIMEOUT_MS, contar = true, sinal = null, metodo = 'GET', corpo = null } = {},
+) {
   if (contar) registrarRequisicao();
 
   const controlador = new AbortController();
   const temporizador = setTimeout(() => controlador.abort(), timeout);
   const removerOuvinte = combinarSinal(controlador, sinal);
 
+  const cabecalhos = { Accept: 'application/json' };
+  const opcoesFetch = { method: metodo, signal: controlador.signal, headers: cabecalhos };
+
+  if (corpo !== null && corpo !== undefined) {
+    cabecalhos['Content-Type'] = 'application/json';
+    opcoesFetch.body = JSON.stringify(corpo);
+  }
+
   try {
-    return await fetch(url, {
-      signal: controlador.signal,
-      headers: { Accept: 'application/json' },
-    });
+    return await fetch(url, opcoesFetch);
   } finally {
     clearTimeout(temporizador);
     removerOuvinte();
@@ -163,9 +171,53 @@ export async function buscarRota(inicio, fim, { modoLivre = false } = {}) {
   });
 }
 
+const MAX_PONTOS_POR_REQUISICAO = 25;
+
 /**
- * Roteia vários pontos em lotes sobrepostos. O primeiro ponto do lote seguinte
- * repete o último do lote anterior para manter a continuidade geométrica.
+ * Roteia 2–25 pontos numa única chamada (`POST /api/route-points`), validando
+ * as pernas no servidor (≤ 8000 m) e usando o cache de 500 entradas.
+ * @param {Array<{lat:number,lng:number}>} pontos
+ * @param {{perfil?:'bike'|'foot', timeout?:number, sinal?:AbortSignal|null}} [opcoes]
+ * @returns {Promise<Array<[number,number,number]>|null>}
+ */
+export async function rotearPontos(pontos, { perfil = 'bike', timeout, sinal = null } = {}) {
+  if (!Array.isArray(pontos) || pontos.length < 2) return null;
+  if (pontos.length > MAX_PONTOS_POR_REQUISICAO) return null;
+  if (!pontos.every(validarLatLng)) return null;
+
+  const corpo = {
+    points: pontos.map((ponto) => [Number(ponto.lat), Number(ponto.lng)]),
+    profile: perfil === 'foot' ? 'foot' : 'bike',
+  };
+
+  return comRetentativa(async () => {
+    const resposta = await requisitar('/api/route-points', {
+      metodo: 'POST',
+      corpo,
+      ...(Number.isFinite(timeout) ? { timeout } : {}),
+      sinal,
+    });
+    if (!resposta.ok) throw erroDeResposta(resposta);
+
+    const dados = await resposta.json();
+    const coordenadas = dados?.coordinates;
+    if (!Array.isArray(coordenadas) || coordenadas.length < 2) {
+      throw new ErroHttp('Rota multi-ponto inválida', 502);
+    }
+
+    const convertidas = coordenadas
+      .map(([lat, lng]) => [Number(lat), Number(lng), 0])
+      .filter(([lat, lng]) => Number.isFinite(lat) && Number.isFinite(lng));
+
+    if (convertidas.length < 2) throw new ErroHttp('Rota multi-ponto inválida', 502);
+    return convertidas;
+  });
+}
+
+/**
+ * Roteia vários pontos em lotes sobrepostos sobre `GET /api/rota`. O primeiro
+ * ponto do lote seguinte repete o último do lote anterior para manter a
+ * continuidade geométrica. Para 2–25 pontos prefira `rotearPontos`.
  * @param {Array<{lat:number,lng:number}>} pontos
  * @returns {Promise<Array<[number,number,number]>|null>}
  */

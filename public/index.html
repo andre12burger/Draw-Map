@@ -110,6 +110,38 @@
       </button>
     </div>
 
+    <div class="ferramentas-extra" role="group" aria-label="Formas e imagem de referência">
+      <button
+        type="button"
+        id="btn-forma"
+        class="btn btn-primario"
+        title="Inserir uma forma no centro do mapa"
+      >
+        ✨ Forma
+      </button>
+      <button
+        type="button"
+        id="btn-imagem"
+        class="btn btn-primario"
+        title="Carregar uma imagem de referência"
+      >
+        🖼️ Imagem
+      </button>
+      <input type="file" id="input-imagem" accept="image/*" hidden />
+      <div id="controlo-opacidade" class="controlo-opacidade" hidden>
+        <label for="input-opacidade">Opacidade</label>
+        <input type="range" id="input-opacidade" min="0" max="100" step="5" value="50" />
+        <button
+          type="button"
+          id="btn-remover-imagem"
+          class="btn btn-perigo btn-mini"
+          title="Remover imagem de referência"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+
     <div id="status" class="status" role="status" aria-live="polite" hidden></div>
     <div id="toasts" class="toasts" aria-live="polite"></div>
 

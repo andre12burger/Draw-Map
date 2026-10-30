@@ -448,3 +448,99 @@ body.ocupado #map {
     bottom: 90px;
   }
 }
+
+/* ==========================================
+   FORMAS GEOMÉTRICAS E IMAGEM DE REFERÊNCIA
+   ========================================== */
+
+.ferramentas-extra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.ferramentas-extra .btn {
+  flex: 1 1 auto;
+  padding: 6px 8px;
+  font-size: 0.78rem;
+}
+
+.controlo-opacidade {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  font-size: 0.78rem;
+  color: #37474f;
+}
+
+.controlo-opacidade[hidden] {
+  display: none;
+}
+
+.controlo-opacidade input[type='range'] {
+  flex: 1;
+  accent-color: #6d4c41;
+}
+
+.btn-mini {
+  padding: 2px 8px;
+  font-size: 0.8rem;
+}
+
+.shape-handle,
+.image-handle {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #1e88e5;
+  border-radius: 50%;
+  background: #fff;
+  color: #1e88e5;
+  font-size: 11px;
+  line-height: 1;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  cursor: grab;
+}
+
+.shape-handle:active,
+.image-handle:active {
+  cursor: grabbing;
+}
+
+.shape-handle--center {
+  border-radius: 4px;
+  background: #1e88e5;
+  color: #fff;
+}
+
+.shape-handle--rotation {
+  border-color: #e53935;
+  color: #e53935;
+}
+
+.shape-handle--corner {
+  border-radius: 2px;
+}
+
+.shape-handle--edge-ew,
+.shape-handle--edge-ns {
+  border-radius: 2px;
+}
+
+.image-handle {
+  border-color: #6d4c41;
+  color: #6d4c41;
+}
+
+.image-handle--center {
+  border-radius: 4px;
+  background: #6d4c41;
+  color: #fff;
+}
+
+.reference-image-layer {
+  pointer-events: none;
+}
