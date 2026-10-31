@@ -235,11 +235,12 @@ npm run format:check
 
 ## 9. Limitações e próximos passos
 
-- Formas e imagem ainda **não são persistidas** no estado global
-  (`localStorage`); vivem no módulo e desaparecem ao recarregar.
-- Não foi implementado `POST /api/project-shape` (snap de polígono com o motor
-  C3); o lápis usa o `POST /api/route-points`/`GET /api/rota` existente.
+- O molde da forma e a imagem de referência **não são persistidos** no
+  `localStorage`: vivem no módulo e desaparecem ao recarregar. A rota consolidada
+  com **Use this route** passa a fazer parte do estado global (e do undo/GPX).
+- O Auto-Fit usa o `POST /api/route-points` existente (até 25 waypoints por
+  requisição) em vez de um `POST /api/project-shape` dedicado no servidor.
 - A biblioteca de formas (`/api/shapes`) não foi replicada; apenas as formas
-  locais (`estrela`, `hexagono`, `triangulo`).
+  locais (`estrela`, `hexagono`, `triangulo`), apresentadas no painel dinâmico.
 - O arrasto do lápis só acumula pontos dentro do mapa; mover o cursor fora do
   contentor interrompe o traço (comportamento igual ao Leaflet nativo).

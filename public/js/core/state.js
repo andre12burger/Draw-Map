@@ -29,6 +29,8 @@ export function criarEstadoInicial() {
     segmentosRota: [],
     modosTraco: [],
     ferramentaAtiva: 'rua',
+    perfilRota: 'bike',
+    perfilUi: 'bike',
     nomeRota: NOME_ROTA_PADRAO,
     distanciaTotal: 0,
     contadorPontos: 0,

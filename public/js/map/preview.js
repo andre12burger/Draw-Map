@@ -76,12 +76,15 @@ export function inicializarPreview() {
 
   mapa.on('mousemove', (evento) => {
     const ferramenta = getCampo('ferramentaAtiva');
-    if (ferramenta === 'lapis') {
+    if (ferramenta === 'lapis' || ferramenta === 'forma') {
       limparPrevia();
       return;
     }
 
-    const livre = Boolean(evento.originalEvent?.shiftKey) || ferramenta === 'livre';
+    const livre =
+      Boolean(evento.originalEvent?.shiftKey) ||
+      ferramenta === 'livre' ||
+      getCampo('perfilUi') === 'free';
     const { tamanhoMarcador } = obterEstilosDinamicos();
 
     garantirMarcador(evento.latlng, livre, tamanhoMarcador);

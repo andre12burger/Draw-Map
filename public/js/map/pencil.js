@@ -245,7 +245,8 @@ async function finalizarDesenho() {
     const ponto = pontos[pontos.length - 1];
     if (!ponto) return;
     // Clique simples = um waypoint (com snap para a via), não um traço.
-    await adicionarPonto({ lat: ponto.lat, lng: ponto.lng }, false);
+    const modoLivre = getCampo('perfilUi') === 'free';
+    await adicionarPonto({ lat: ponto.lat, lng: ponto.lng }, modoLivre);
     return;
   }
 
@@ -260,7 +261,7 @@ async function finalizarDesenho() {
     return;
   }
 
-  await processarLoteLapis(estrategicos, false);
+  await processarLoteLapis(estrategicos, getCampo('perfilUi') === 'free');
 }
 
 export function cancelarLapis() {

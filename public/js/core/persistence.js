@@ -10,6 +10,8 @@ export const NOME_ROTA_PADRAO = 'Strava Art Route';
 
 const FERRAMENTAS = new Set(['rua', 'livre', 'lapis']);
 const MODOS_TRACO = new Set(['rua', 'livre']);
+const PERFIS_ROTA = new Set(['bike', 'foot']);
+const PERFIS_UI = new Set(['bike', 'foot', 'free']);
 
 function numeroValido(valor, minimo, maximo) {
   return Number.isFinite(valor) && valor >= minimo && valor <= maximo;
@@ -101,6 +103,8 @@ export function sanitizarEstado(dados) {
     segmentosRota: segmentos,
     modosTraco: modos,
     ferramentaAtiva: FERRAMENTAS.has(dados.ferramentaAtiva) ? dados.ferramentaAtiva : 'rua',
+    perfilRota: PERFIS_ROTA.has(dados.perfilRota) ? dados.perfilRota : 'bike',
+    perfilUi: PERFIS_UI.has(dados.perfilUi) ? dados.perfilUi : 'bike',
     nomeRota:
       typeof dados.nomeRota === 'string' && dados.nomeRota.trim().length > 0
         ? dados.nomeRota.trim().slice(0, 80)
@@ -127,6 +131,8 @@ export function extrairPersistivel(estado) {
     segmentosRota: estado.segmentosRota,
     modosTraco: estado.modosTraco,
     ferramentaAtiva: estado.ferramentaAtiva,
+    perfilRota: estado.perfilRota,
+    perfilUi: estado.perfilUi,
     nomeRota: estado.nomeRota,
     distanciaTotal: estado.distanciaTotal,
     contadorPontos: estado.contadorPontos,

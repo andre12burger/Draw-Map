@@ -16,14 +16,21 @@
     <script src="vendor/leaflet/leaflet.js"></script>
   </head>
   <body>
-    <div id="legenda" role="region" aria-label="Painel de planejamento da rota">
+    <div id="map" role="region" aria-label="Mapa para desenhar a rota"></div>
+
+    <header id="barra-superior" class="barra-superior">
+      <div class="marca" aria-label="Strava Art Generator">
+        <span class="marca__icone" aria-hidden="true">✏️</span>
+        <span class="marca__texto">strava art</span>
+      </div>
+
       <form id="form-busca" class="busca" role="search">
         <div class="busca__campo">
           <label class="sr-only" for="input-endereco">Pesquisar endereço</label>
           <input
             type="search"
             id="input-endereco"
-            placeholder="Ex.: Praça Saraiva, Rio Grande"
+            placeholder="Pesquisar localização…"
             role="combobox"
             aria-autocomplete="list"
             aria-expanded="false"
@@ -47,105 +54,269 @@
           🔍
         </button>
       </form>
+    </header>
 
-      <h2 class="secao-titulo">Como desenhar</h2>
-      <ul class="ajuda">
-        <li>🖱️ <b>Clique:</b> segue as ruas</li>
-        <li>⇧ <b>Shift + clique:</b> reta livre (tracejada)</li>
-        <li>🖱️ <b>Botão direito na linha:</b> insere um ponto</li>
-        <li>✏️ <b>Lápis:</b> desenho livre (arraste para desenhar)</li>
-        <li>⌨️ <b>1 / 2 / 3:</b> Rua / Livre / Lápis</li>
-        <li>⌨️ <b>Espaço:</b> arrastar o mapa no modo lápis</li>
-        <li>⌨️ <b>Ctrl + Z:</b> desfazer último passo</li>
-      </ul>
+    <aside id="painel-contexto" class="painel-contexto" aria-label="Painel de contexto">
+      <section id="painel-rota" class="painel-secao" aria-label="Rota atual">
+        <div class="painel-cabecalho">
+          <h2 class="painel-titulo">Rota</h2>
+          <span class="painel-etiqueta" id="painel-perfil-rotulo">Cycling</span>
+        </div>
 
-      <div class="estatisticas" aria-label="Estatísticas da rota">
-        <span>📏 <strong>Distância:</strong> <span id="distancia-total">0.00</span> km</span>
-        <span>📍 <strong>Pontos:</strong> <span id="contador-pontos">0</span></span>
-        <span>🌐 <strong>Requisições:</strong> <span id="contador-api">0</span></span>
-      </div>
+        <div class="estatisticas" aria-label="Estatísticas da rota">
+          <span>📏 <strong>Distância:</strong> <span id="distancia-total">0.00</span> km</span>
+          <span>📍 <strong>Pontos:</strong> <span id="contador-pontos">0</span></span>
+          <span>🌐 <strong>Requisições:</strong> <span id="contador-api">0</span></span>
+        </div>
 
-      <label class="campo-nome" for="input-nome-rota">
-        <span>Nome da rota</span>
-        <input
-          type="text"
-          id="input-nome-rota"
-          maxlength="80"
-          placeholder="Strava Art Route"
-          autocomplete="off"
-        />
-      </label>
+        <p class="painel-dica">
+          Clique no mapa para seguir as ruas. Use <b>Shift + clique</b> para uma reta livre.
+        </p>
 
-      <button type="button" id="btn-exportar" class="btn btn-primario">📥 Baixar .GPX</button>
-      <button type="button" id="btn-limpar" class="btn btn-perigo">🗑️ Apagar tudo</button>
-    </div>
+        <label class="campo-nome" for="input-nome-rota">
+          <span>Nome da rota</span>
+          <input
+            type="text"
+            id="input-nome-rota"
+            maxlength="80"
+            placeholder="Strava Art Route"
+            autocomplete="off"
+          />
+        </label>
 
-    <div id="toolbar" class="toolbar" role="toolbar" aria-label="Modo de desenho">
-      <button
-        type="button"
-        class="btn-ferramenta ativo"
-        data-ferramenta="rua"
-        aria-pressed="true"
-        title="Modo Rua (atalho: 1)"
+        <details class="ajuda-bloco">
+          <summary>Como desenhar</summary>
+          <ul class="ajuda">
+            <li>🖱️ <b>Clique:</b> segue as ruas</li>
+            <li>⇧ <b>Shift + clique:</b> reta livre (tracejada)</li>
+            <li>🖱️ <b>Botão direito na linha:</b> insere um ponto</li>
+            <li>✏️ <b>Pencil:</b> desenho livre (arraste para desenhar)</li>
+            <li>🔷 <b>Shape:</b> molde geométrico com Auto-Fit nas ruas</li>
+            <li>⌨️ <b>1 / 2 / 3 / 4:</b> Points / Free / Pencil / Shape</li>
+            <li>⌨️ <b>Espaço:</b> arrastar o mapa no modo Pencil</li>
+            <li>⌨️ <b>Ctrl + Z:</b> desfazer último passo</li>
+          </ul>
+        </details>
+
+        <div class="ferramentas-extra" role="group" aria-label="Imagem de referência">
+          <button
+            type="button"
+            id="btn-imagem"
+            class="btn btn-contorno btn-mini"
+            title="Carregar uma imagem de referência"
+          >
+            🖼️ Imagem
+          </button>
+          <input type="file" id="input-imagem" accept="image/*" hidden />
+          <div id="controlo-opacidade" class="controlo-opacidade" hidden>
+            <label for="input-opacidade">Opacidade</label>
+            <input type="range" id="input-opacidade" min="0" max="100" step="5" value="50" />
+            <button
+              type="button"
+              id="btn-remover-imagem"
+              class="btn btn-perigo btn-mini"
+              title="Remover imagem de referência"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="painel-forma"
+        class="painel-secao painel-secao--forma painel-forma"
+        hidden
+        aria-label="Forma geométrica"
       >
-        🛣️ <span>Rua</span>
-      </button>
-      <button
-        type="button"
-        class="btn-ferramenta"
-        data-ferramenta="livre"
-        aria-pressed="false"
-        title="Modo Livre (atalho: 2 ou Shift)"
-      >
-        🦅 <span>Livre</span>
-      </button>
-      <button
-        type="button"
-        class="btn-ferramenta"
-        data-ferramenta="lapis"
-        aria-pressed="false"
-        title="Modo Lápis (atalho: 3)"
-      >
-        ✏️ <span>Lápis</span>
-      </button>
-    </div>
+        <div class="painel-cabecalho">
+          <h2 class="painel-titulo">Shapes</h2>
+          <button
+            type="button"
+            id="btn-fechar-forma"
+            class="btn-fantasma"
+            title="Sair do modo Shape"
+            aria-label="Sair do modo Shape"
+          >
+            ✕
+          </button>
+        </div>
 
-    <div class="ferramentas-extra" role="group" aria-label="Formas e imagem de referência">
-      <button
-        type="button"
-        id="btn-forma"
-        class="btn btn-primario"
-        title="Inserir uma forma no centro do mapa"
-      >
-        ✨ Forma
-      </button>
-      <button
-        type="button"
-        id="btn-imagem"
-        class="btn btn-primario"
-        title="Carregar uma imagem de referência"
-      >
-        🖼️ Imagem
-      </button>
-      <input type="file" id="input-imagem" accept="image/*" hidden />
-      <div id="controlo-opacidade" class="controlo-opacidade" hidden>
-        <label for="input-opacidade">Opacidade</label>
-        <input type="range" id="input-opacidade" min="0" max="100" step="5" value="50" />
+        <div class="forma-opcoes" role="group" aria-label="Escolher forma geométrica">
+          <button
+            type="button"
+            class="forma-opcao"
+            data-forma="triangulo"
+            aria-pressed="false"
+            title="Triângulo"
+          >
+            <svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+              <polygon points="50,14 88,84 12,84" />
+            </svg>
+            <span>Triângulo</span>
+          </button>
+          <button
+            type="button"
+            class="forma-opcao ativo"
+            data-forma="estrela"
+            aria-pressed="true"
+            title="Estrela"
+          >
+            <svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+              <polygon points="50,8 61,37 92,37 67,56 76,86 50,68 24,86 33,56 8,37 39,37" />
+            </svg>
+            <span>Estrela</span>
+          </button>
+          <button
+            type="button"
+            class="forma-opcao"
+            data-forma="hexagono"
+            aria-pressed="false"
+            title="Hexágono"
+          >
+            <svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+              <polygon points="50,8 86,29 86,71 50,92 14,71 14,29" />
+            </svg>
+            <span>Hexágono</span>
+          </button>
+        </div>
+
+        <p id="forma-resumo" class="forma-resumo">Estrela · 2,0 km × 2,0 km · 0°</p>
+
+        <label class="campo-alvo" for="input-alvo">
+          <span class="campo-alvo__rotulo">Distância alvo</span>
+          <span class="campo-alvo__valor">
+            <input
+              type="number"
+              id="input-alvo"
+              min="0.2"
+              max="60"
+              step="0.1"
+              inputmode="decimal"
+              value="2.0"
+            />
+            <span>km</span>
+          </span>
+        </label>
+        <p class="forma-dica">
+          Comprimento do molde. O Auto-Fit procura ruas próximas para chegar perto deste valor.
+        </p>
+
+        <dl class="forma-medidas">
+          <div>
+            <dt>Rota atual</dt>
+            <dd id="forma-distancia">—</dd>
+          </div>
+          <div>
+            <dt>Diferença</dt>
+            <dd id="forma-diferenca">—</dd>
+          </div>
+        </dl>
+
+        <p id="forma-status" class="forma-status" role="status" aria-live="polite">
+          Mova, rode ou redimensione: a rota acompanha as ruas.
+        </p>
+
+        <button type="button" id="btn-melhor-local" class="btn btn-perigo">
+          🎯 Find a better spot
+        </button>
+        <button type="button" id="btn-usar-rota" class="btn btn-contorno" disabled>
+          ↳ Use this route
+        </button>
+        <button type="button" id="btn-remover-forma" class="btn btn-texto">🗑️ Remove shape</button>
+      </section>
+    </aside>
+
+    <nav id="barra-inferior" class="barra-inferior" aria-label="Perfis de roteamento e ferramentas">
+      <div class="barra-grupo" role="group" aria-label="Perfil de roteamento">
         <button
           type="button"
-          id="btn-remover-imagem"
-          class="btn btn-perigo btn-mini"
-          title="Remover imagem de referência"
+          class="pilula perfil ativo"
+          data-perfil="bike"
+          aria-pressed="true"
+          title="Perfil bicicleta"
         >
-          ✕
+          <span class="pilula__icone" aria-hidden="true">🚴</span>
+          <span class="pilula__texto">Cycling</span>
+        </button>
+        <button
+          type="button"
+          class="pilula perfil"
+          data-perfil="foot"
+          aria-pressed="false"
+          title="Perfil caminhada"
+        >
+          <span class="pilula__icone" aria-hidden="true">🥾</span>
+          <span class="pilula__texto">Walking</span>
+        </button>
+        <button
+          type="button"
+          class="pilula perfil"
+          data-perfil="free"
+          aria-pressed="false"
+          title="Traço livre, sem seguir ruas"
+        >
+          <span class="pilula__icone" aria-hidden="true">✨</span>
+          <span class="pilula__texto">Free</span>
         </button>
       </div>
-    </div>
+
+      <span class="barra-divisor" aria-hidden="true"></span>
+
+      <div class="barra-grupo" role="group" aria-label="Ferramentas de desenho">
+        <button
+          type="button"
+          class="pilula ferramenta ativo"
+          data-ferramenta="rua"
+          aria-pressed="true"
+          title="Pontos (atalho: 1)"
+        >
+          <span class="pilula__icone" aria-hidden="true">📍</span>
+          <span class="pilula__texto">Points</span>
+        </button>
+        <button
+          type="button"
+          class="pilula ferramenta"
+          data-ferramenta="lapis"
+          aria-pressed="false"
+          title="Pencil (atalho: 3)"
+        >
+          <span class="pilula__icone" aria-hidden="true">✏️</span>
+          <span class="pilula__texto">Pencil</span>
+        </button>
+        <button
+          type="button"
+          class="pilula ferramenta"
+          data-ferramenta="forma"
+          aria-pressed="false"
+          title="Shape (atalho: 4)"
+        >
+          <span class="pilula__icone" aria-hidden="true">🔷</span>
+          <span class="pilula__texto">Shape</span>
+        </button>
+        <button
+          type="button"
+          id="btn-limpar"
+          class="pilula pilula--perigo"
+          title="Apagar tudo (Ctrl+Z desfaz)"
+        >
+          <span class="pilula__icone" aria-hidden="true">🗑️</span>
+          <span class="pilula__texto">Clear All</span>
+        </button>
+        <button
+          type="button"
+          id="btn-exportar"
+          class="pilula pilula--primario"
+          title="Baixar o traçado em .GPX"
+        >
+          <span class="pilula__icone" aria-hidden="true">📥</span>
+          <span class="pilula__texto">Export GPX</span>
+        </button>
+      </div>
+    </nav>
 
     <div id="status" class="status" role="status" aria-live="polite" hidden></div>
     <div id="toasts" class="toasts" aria-live="polite"></div>
-
-    <div id="map" role="region" aria-label="Mapa para desenhar a rota"></div>
 
     <script type="module" src="js/main.js"></script>
   </body>

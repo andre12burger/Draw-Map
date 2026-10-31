@@ -398,6 +398,74 @@ export async function processarLoteLapis(pontosBrutos, modoLivre = false) {
 }
 
 /**
+ * Incorpora uma geometria já roteada (ex.: Auto-Fit da forma) ao desenho
+ * oficial. Não re-roteia o laço: apenas conecta o traçado existente ao início
+ * da rota com um trecho de rua, quando necessário.
+ * @param {Array<[number,number]|{lat:number,lng:number}>} pontos
+ * @returns {Promise<boolean>}
+ */
+export async function importarRota(pontos) {
+  if (!Array.isArray(pontos)) return false;
+
+  const normalizados = pontos
+    .map((ponto) =>
+      Array.isArray(ponto)
+        ? normalizarLatLng({ lat: ponto[0], lng: ponto[1] })
+        : normalizarLatLng(ponto),
+    )
+    .filter((ponto) => ponto !== null);
+
+  if (normalizados.length < 2) return false;
+  if (!iniciar('Incorporando rota da forma...')) return false;
+
+  try {
+    const estado = getEstado();
+    const coordenadas = estado.coordenadasNiveis;
+    const rota = normalizados.map((ponto) => [ponto.lat, ponto.lng]);
+    const inicio = normalizados[0];
+    const fim = normalizados[normalizados.length - 1];
+
+    if (coordenadas.length === 0) {
+      coordenadas.push(inicio);
+      estado.segmentosRota.push([[inicio.lat, inicio.lng]]);
+      estado.modosTraco.push('rua');
+
+      coordenadas.push(fim);
+      estado.segmentosRota.push(rota);
+      estado.modosTraco.push('rua');
+
+      aplicar(estado);
+      return true;
+    }
+
+    const ultimo = coordenadas[coordenadas.length - 1];
+    const conexao = await buscarRota(ultimo, inicio, { modoLivre: false });
+
+    if (!conexao) {
+      mostrarToast('Não foi possível ligar o desenho atual à rota da forma.', {
+        tipo: 'erro',
+      });
+      return false;
+    }
+
+    conexao[0] = [ultimo.lat, ultimo.lng];
+
+    coordenadas.push(fim);
+    estado.segmentosRota.push(conexao.concat(rota.slice(1)));
+    estado.modosTraco.push('rua');
+
+    aplicar(estado);
+    return true;
+  } catch (erro) {
+    console.error('Erro ao incorporar rota da forma:', erro);
+    mostrarToast('Erro inesperado ao incorporar a rota da forma.', { tipo: 'erro' });
+    return false;
+  } finally {
+    finalizar();
+  }
+}
+
+/**
  * Apaga a rota, mantendo a possibilidade de desfazer (Ctrl+Z).
  * @returns {boolean}
  */

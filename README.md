@@ -16,13 +16,15 @@ Projeto académico de **Cliente/Servidor** com arquitetura **frontend estático 
 - **Roteamento nas ruas (snap-to-road):** cada clique é projetado na via mais próxima e ligado por uma rota real do BRouter.
 - **Modo Livre / Shift+clique:** liga pontos em linha reta tracejada, sem consultar o roteador.
 - **Modo Lápis:** desenho livre com simplificação em pixels, subdivisão de trechos longos e roteamento em lote (40 pontos por requisição).
+- **Barra inferior em pílula:** perfis **Cycling/Walking/Free** e ferramentas **Points/Pencil/Shape**, além de **Clear All** e **Export GPX**.
+- **Shape + Auto-Fit:** o polígono é apenas um molde tracejado; até 25 waypoints amostrados (limite da API) são roteados nas ruas e a linha vermelha resultante é desenhada por cima. Inclui distância alvo, **Find a better spot** e **Use this route**, que consolida a geometria no desenho oficial e destrói o molde.
 - **Edição:** arrastar marcadores re-roteia os trechos vizinhos; botão direito numa linha insere um ponto intermediário — inclusive no último trecho.
 - **Undo (Ctrl+Z):** pilha de 50 estados, mantida em memória, com restauração transacional (sem corromper snapshots).
-- **Persistência versionada:** rota, modos, ferramenta, nome e posição do mapa no `LocalStorage`; histórico não é persistido para evitar estouro de cota.
+- **Persistência versionada:** rota, modos, ferramenta, perfil, nome e posição do mapa no `LocalStorage`; histórico não é persistido para evitar estouro de cota.
 - **Busca de endereços:** autocomplete via Nominatim com debounce, cancelamento de requisições, navegação por teclado (setas/Enter/Escape) e cache de 24 h no servidor.
 - **Exportação GPX 1.1:** metadados, nome configurável, elevação e escape XML.
-- **Feedback acessível:** toasts (`aria-live`), status de carregamento, `aria-pressed` nas ferramentas e foco visível.
-- **Atalhos:** `1` Rua, `2` Livre, `3` Lápis, `Shift` reta livre, `Espaço` pan no lápis, `Ctrl+Z` desfazer.
+- **Feedback acessível:** toasts (`aria-live`), status de carregamento, `aria-pressed` nas ferramentas/perfis e foco visível.
+- **Atalhos:** `1` Points, `2` Free, `3` Pencil, `4` Shape, `Shift` reta livre, `Espaço` pan no lápis, `Ctrl+Z` desfazer.
 
 ---
 
@@ -34,8 +36,8 @@ Navegador (Leaflet + ES Modules)
   ├─ core/history.js      → pilha de snapshots (memória)
   ├─ core/persistence.js  → LocalStorage versionado + sanitização
   ├─ services/api.js      → fetch com timeout, abort, retry e contador
-  ├─ map/                 → mapa, render, draw, lápis, preview, distância
-  ├─ ui/                  → toolbar, busca, estatísticas, toasts
+  ├─ map/                 → mapa, render, draw, lápis, formas e shape-studio (Auto-Fit)
+  ├─ ui/                  → toolbar, painel de formas, busca, estatísticas, toasts
   └─ export/gpx.js        → gerador GPX puro + download
         │  /api/pesquisa, /api/rota
         ▼
@@ -193,7 +195,7 @@ Documentação detalhada das funções geodésicas e dos módulos de formas/imag
 ## 🧪 Testes e qualidade
 
 ```bash
-npm test               # 53 testes unitários (Vitest + jsdom)
+npm test               # 138 testes unitários (Vitest + jsdom)
 npm run test:coverage  # cobertura V8
 npm run lint           # ESLint 10 (flat config)
 npm run format:check   # Prettier
@@ -215,6 +217,8 @@ Cobertura atual dos testes unitários:
 - `gpx`: GPX 1.1, escape XML, deduplicação, elevação e nome do arquivo.
 - `api`: modo livre, conversão de coordenadas, retry/erros e contador.
 - `validators` / `cache`: injeção de parâmetros, allowlist, ranges, TTL e LRU.
+- `shapes` / `shape-studio` / `toolbar`: molde, alças, amostragem ≤ 25 waypoints, Auto-Fit com API mockada, distância alvo, troca de forma e “Use this route” (injeção no estado + destruição do molde).
+- `shape-flow`: fluxo completo em jsdom com o `index.html` real e `main.js` — clique em Shape, Auto-Fit, linha vermelha, “Use this route” e métricas no estado.
 - `frontend-smoke`: inicializa o `index.html` real, o Leaflet e o `main.js` em jsdom; desenha dois pontos, calcula distância, desfaz, apaga e desfaz a limpeza.
 
 O template de CI está em `docs/ci/workflow-ci.yml` (o app de integração usado neste ambiente não tem permissão para publicar arquivos em `.github/workflows/`). Para ativá-lo, copie o arquivo para `.github/workflows/ci.yml` em um commit com permissão de workflows. Ele executa lint, formatação, testes unitários e E2E em Node 24.
@@ -237,8 +241,8 @@ public/
     main.js
     core/{state,history,persistence,utils,geo}.js
     services/api.js
-    map/{map,render,draw,pencil,preview,distance,shapes,image-overlay}.js
-    ui/{toolbar,search,stats,toast}.js
+    map/{map,render,draw,pencil,preview,distance,shapes,shape-studio,image-overlay}.js
+    ui/{toolbar,shape-panel,search,stats,toast}.js
     export/gpx.js
   vendor/leaflet/     # gerado por npm run vendor/postinstall
 tests/

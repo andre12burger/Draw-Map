@@ -211,6 +211,7 @@ function estadoPublico(estado) {
     scaleX: estado.scaleX,
     scaleY: estado.scaleY,
     visible: estado.visivel,
+    latlngs: estado.latlngs.map(([lat, lng]) => ({ lat, lng })),
   };
 }
 
@@ -278,12 +279,15 @@ function renderizar(estado) {
   if (estado.latlngs.length === 0) return;
 
   if (estado.camadas.length === 0) {
+    // A forma é apenas um molde: linha fina tracejada, sem preenchimento, para
+    // que a rota real (linha vermelha do Auto-Fit) fique legível por cima.
     const estilo = {
-      color: '#1e88e5',
-      weight: 3,
+      color: '#0f766e',
+      weight: 1.6,
       opacity: 0.9,
-      fillColor: '#1e88e5',
-      fillOpacity: 0.15,
+      dashArray: '8 7',
+      fill: false,
+      fillOpacity: 0,
       className: 'forma-art',
       interactive: false,
     };

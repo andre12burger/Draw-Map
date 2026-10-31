@@ -16,7 +16,7 @@ import {
   limparTudo,
 } from './map/draw.js';
 import { inicializarPencil } from './map/pencil.js';
-import { criarForma, inicializarFormas } from './map/shapes.js';
+import { inicializarEstudioForma } from './map/shape-studio.js';
 import {
   definirOpacidade,
   inicializarImagemReferencia,
@@ -24,7 +24,7 @@ import {
   removerImagem,
 } from './map/image-overlay.js';
 import { inicializarPreview } from './map/preview.js';
-import { inicializarToolbar } from './ui/toolbar.js';
+import { definirFerramenta, inicializarToolbar } from './ui/toolbar.js';
 import { inicializarBusca } from './ui/search.js';
 import { inicializarExportacao } from './export/gpx.js';
 import { inscreverContadorRequisicoes } from './services/api.js';
@@ -48,7 +48,8 @@ inscrever((estado) => redesenhar(estado));
 mapa.on('zoomend', atualizarEstilos);
 
 mapa.on('click', async (evento) => {
-  if (getCampo('ferramentaAtiva') === 'lapis') return;
+  const ferramenta = getCampo('ferramentaAtiva');
+  if (ferramenta === 'lapis' || ferramenta === 'forma') return;
 
   if (estaOcupado()) {
     mostrarToast('Aguarde o cálculo anterior terminar.', { tipo: 'aviso', duracao: 2000 });
@@ -56,7 +57,9 @@ mapa.on('click', async (evento) => {
   }
 
   const modoLivre =
-    Boolean(evento.originalEvent?.shiftKey) || getCampo('ferramentaAtiva') === 'livre';
+    Boolean(evento.originalEvent?.shiftKey) ||
+    ferramenta === 'livre' ||
+    getCampo('perfilUi') === 'free';
 
   await adicionarPonto(evento.latlng, modoLivre);
 });
@@ -89,43 +92,21 @@ window.addEventListener('keydown', (evento) => {
   }
 });
 
+inicializarEstudioForma({ aoSairDoModo: () => definirFerramenta('rua') });
 inicializarToolbar();
 inicializarBusca();
 inicializarPencil();
 inicializarPreview();
 inicializarExportacao();
-inicializarFormas();
 inicializarImagemReferencia();
 
-// --- Formas geométricas e imagem de referência -------------------------------
+// --- Imagem de referência ----------------------------------------------------
 
 let urlImagemReferencia = null;
 
 const controloOpacidade = document.getElementById('controlo-opacidade');
 const inputOpacidade = document.getElementById('input-opacidade');
 const inputImagem = document.getElementById('input-imagem');
-
-document.getElementById('btn-forma')?.addEventListener('click', () => {
-  const centro = mapa.getCenter();
-  const forma = criarForma({
-    shape: 'estrela',
-    center: { lat: centro.lat, lng: centro.lng },
-    size: 2000,
-    interativa: true,
-    callbacks: {
-      onTransformEnd: () => {
-        mostrarToast('Forma atualizada.', { tipo: 'info', duracao: 1500 });
-      },
-    },
-  });
-
-  if (forma) {
-    mostrarToast('Forma inserida. Arraste as alças para transformar.', {
-      tipo: 'info',
-      duracao: 3000,
-    });
-  }
-});
 
 document.getElementById('btn-imagem')?.addEventListener('click', () => inputImagem?.click());
 

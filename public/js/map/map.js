@@ -46,8 +46,12 @@ function criarMapa() {
   const instancia = L.map('map', {
     doubleClickZoom: false,
     boxZoom: false,
-    zoomControl: true,
+    zoomControl: false,
   }).setView([view.lat, view.lng], view.zoom);
+
+  // A barra superior ocupa o canto superior esquerdo; o zoom vai para o canto
+  // inferior direito para não colidir com a marca nem com a busca.
+  L.control.zoom({ position: 'bottomright' }).addTo(instancia);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: ZOOM_NATIVO_MAXIMO,

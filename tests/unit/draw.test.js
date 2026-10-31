@@ -20,6 +20,7 @@ import {
   aoInserirPonto,
   desfazer,
   estaOcupado,
+  importarRota,
   limparTudo,
   processarLoteLapis,
 } from '../../public/js/map/draw.js';
@@ -214,5 +215,62 @@ describe('draw — arrasto, lote e limpeza', () => {
     expect(segunda).toBe(false);
     resolver(rota(p1, p2));
     expect(await primeira).toBe(true);
+  });
+
+  it('incorpora uma rota pronta num desenho vazio', async () => {
+    const laço = [
+      [p1.lat, p1.lng, 0],
+      [p2.lat, p2.lng, 0],
+      [p1.lat, p1.lng, 0],
+    ];
+
+    const ok = await importarRota(laço);
+
+    expect(ok).toBe(true);
+
+    const estado = getEstado();
+    expect(estado.coordenadasNiveis).toEqual([p1, p1]);
+    expect(estado.segmentosRota[0]).toEqual([[p1.lat, p1.lng]]);
+    expect(estado.segmentosRota[1]).toEqual([
+      [p1.lat, p1.lng],
+      [p2.lat, p2.lng],
+      [p1.lat, p1.lng],
+    ]);
+    expect(estado.modosTraco).toEqual(['rua', 'rua']);
+    expect(estado.distanciaTotal).toBeGreaterThan(0);
+    expect(buscarRota).not.toHaveBeenCalled();
+  });
+
+  it('liga a rota da forma ao traçado existente com um trecho de rua', async () => {
+    estadoComDoisPontos();
+    buscarRota.mockResolvedValueOnce([
+      [p2.lat, p2.lng, 0],
+      [-32.05, -52.15, 0],
+      [p1.lat, p1.lng, 0],
+    ]);
+
+    const ok = await importarRota([
+      { lat: p1.lat, lng: p1.lng },
+      { lat: p2.lat, lng: p2.lng },
+    ]);
+
+    expect(ok).toBe(true);
+    expect(buscarRota).toHaveBeenCalledWith(p2, p1, { modoLivre: false });
+
+    const estado = getEstado();
+    expect(estado.coordenadasNiveis).toHaveLength(3);
+    expect(estado.segmentosRota[2]).toEqual([
+      [p2.lat, p2.lng],
+      [-32.05, -52.15, 0],
+      [p1.lat, p1.lng, 0],
+      [p2.lat, p2.lng],
+    ]);
+    expect(estado.distanciaTotal).toBeGreaterThan(0);
+  });
+
+  it('recusa rotas com menos de dois pontos válidos', async () => {
+    expect(await importarRota([[p1.lat, p1.lng]])).toBe(false);
+    expect(await importarRota(null)).toBe(false);
+    expect(getEstado().coordenadasNiveis).toHaveLength(0);
   });
 });
