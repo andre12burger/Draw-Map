@@ -245,7 +245,8 @@ public/
     map/{map,render,draw,pencil,preview,distance,shapes,shape-studio,image-overlay}.js
     ui/{toolbar,shape-panel,search,stats,toast}.js
     export/gpx.js
-  vendor/leaflet/     # gerado por npm run vendor/postinstall
+  fonts/               # Geist (SIL OFL) usado no painel Shape
+  vendor/leaflet/      # gerado por npm run vendor/postinstall
 tests/
   unit/               # Vitest
   e2e/                # Playwright

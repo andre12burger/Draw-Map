@@ -184,6 +184,16 @@ recalcula a rota uma única vez, cancelando pedidos antigos com `AbortController
 O `center` da alça central é o centro da **bounding box**, garantindo que o offset
 não provoca saltos.
 
+### Tokens extraídos do dump DML
+
+- Verde principal `#2e8b7a` (`--sapin-500`) e verde escuro `#246e61` (`--sapin-600`).
+- Tinta `#23201b` (`--warm-900`) para bordas e texto forte; corpo `#474136`; muted `#645d4d`.
+- Superfícies `#fbf8ef` (card) e `#f4efe2` (sunken); destaque `#fff8e0`.
+- CTA de Auto-Fit `#d63b22`; sucesso `#2e8b7a`.
+- Alças: canto 20×20 (icon 24×24), borda 24×24 (icon 28×28), rotação 24×24
+  (icon 28×28) e centro 20×20 (icon 50×50).
+- Fonte **Geist** (SIL OFL), servida localmente em `public/fonts/geist-latin.woff2`.
+
 ---
 
 ## 7. `public/js/map/image-overlay.js`

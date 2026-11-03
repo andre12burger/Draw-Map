@@ -42,7 +42,7 @@ export function criarEstrela(pontas = 5, raioInterno = 0.4) {
 
   return {
     id: 'estrela',
-    name: 'Estrela',
+    name: 'Star',
     type: 'polygon',
     closed: true,
     tension: 0.5,
@@ -68,7 +68,7 @@ export function criarPoligonoRegular(lados = 6) {
 
   return {
     id: 'poligono',
-    name: 'Polígono',
+    name: 'Polygon',
     type: 'polygon',
     closed: true,
     tension: 0.5,
@@ -170,16 +170,30 @@ const formas = new Map();
 let contadorId = 0;
 
 function iconeAlca(tipo, html) {
+  const centro = tipo === 'center';
+  const tamanho = centro ? 50 : tipo === 'corner' ? 24 : 28;
+
+  let conteudo;
+  if (centro) {
+    conteudo = '<span class="shape-handle-hit"><span class="shape-handle--center"></span></span>';
+  } else {
+    const classes =
+      tipo === 'edge-ew' || tipo === 'edge-ns'
+        ? `shape-handle shape-handle--edge shape-handle--${tipo}`
+        : `shape-handle shape-handle--${tipo}`;
+    conteudo = `<span class="${classes}" aria-hidden="true">${html}</span>`;
+  }
+
   return L.divIcon({
-    className: `shape-handle shape-handle--${tipo}`,
-    html: `<span aria-hidden="true">${html}</span>`,
-    iconSize: [16, 16],
-    iconAnchor: [8, 8],
+    className: centro ? 'shape-handle-icon shape-handle-icon--center' : 'shape-handle-icon',
+    html: conteudo,
+    iconSize: [tamanho, tamanho],
+    iconAnchor: [tamanho / 2, tamanho / 2],
   });
 }
 
 function criarMarcadorAlca(posicao, tipo, html, titulo) {
-  return L.marker([posicao.lat, posicao.lng], {
+  const marcador = L.marker([posicao.lat, posicao.lng], {
     icon: iconeAlca(tipo, html),
     draggable: true,
     keyboard: false,
@@ -187,6 +201,17 @@ function criarMarcadorAlca(posicao, tipo, html, titulo) {
     alt: titulo,
     zIndexOffset: 1000,
   }).addTo(getMap());
+
+  if (tipo === 'center') {
+    marcador.bindTooltip('Drag to move shape', {
+      direction: 'top',
+      offset: [0, -16],
+      opacity: 1,
+      className: 'shape-handle-tooltip',
+    });
+  }
+
+  return marcador;
 }
 
 /**
@@ -384,6 +409,16 @@ function aplicarArrasto(estado, marcador, inicial) {
   agendarRender(estado);
 }
 
+function marcarArrastando(marcador, ativo) {
+  const raiz = marcador.getElement();
+  if (!raiz) return;
+
+  raiz.classList.toggle('arrastando', ativo);
+  raiz.querySelector('.shape-handle--center, .shape-handle')?.classList.toggle('arrastando', ativo);
+  if (ativo) marcador.openTooltip();
+  else marcador.closeTooltip();
+}
+
 function ligarAlca(estado, chave, marcador) {
   const mapa = getMap();
   let inicial = null;
@@ -392,7 +427,7 @@ function ligarAlca(estado, chave, marcador) {
     clearTimeout(temporizadorFimTransformacao);
     temporizadorFimTransformacao = null;
     mapa.dragging.disable();
-    marcador.getElement()?.classList.add('arrastando');
+    marcarArrastando(marcador, true);
     inicial = snapshotAlca(estado, chave, marcador);
     estado.callbacks.onTransformStart?.(estadoPublico(estado));
   });
@@ -404,7 +439,7 @@ function ligarAlca(estado, chave, marcador) {
 
   marcador.on('dragend', () => {
     mapa.dragging.enable();
-    marcador.getElement()?.classList.remove('arrastando');
+    marcarArrastando(marcador, false);
     renderizar(estado);
 
     clearTimeout(temporizadorFimTransformacao);
@@ -418,21 +453,16 @@ function ligarAlca(estado, chave, marcador) {
 
 function criarAlcas(estado) {
   const definicoes = [
-    [
-      'center',
-      'center',
-      '<span class="shape-handle__glyph" aria-hidden="true">✥</span><span class="shape-handle__label">Drag to move shape</span>',
-      'Mover forma',
-    ],
+    ['center', 'center', '', 'Mover forma'],
     ['nw', 'corner', '', 'Redimensionar'],
     ['ne', 'corner', '', 'Redimensionar'],
     ['sw', 'corner', '', 'Redimensionar'],
     ['se', 'corner', '', 'Redimensionar'],
     ['rotation', 'rotation', '', 'Rodar forma'],
-    ['left', 'edge-ew', '⇔', 'Escalar no eixo X (esquerda)'],
-    ['right', 'edge-ew', '⇔', 'Escalar no eixo X (direita)'],
-    ['top', 'edge-ns', '⇕', 'Escalar no eixo Y (topo)'],
-    ['bottom', 'edge-ns', '⇕', 'Escalar no eixo Y (base)'],
+    ['left', 'edge-ew', '', 'Escalar no eixo X (esquerda)'],
+    ['right', 'edge-ew', '', 'Escalar no eixo X (direita)'],
+    ['top', 'edge-ns', '', 'Escalar no eixo Y (topo)'],
+    ['bottom', 'edge-ns', '', 'Escalar no eixo Y (base)'],
   ];
 
   // Haste visual que liga o topo da forma à alça de rotação.

@@ -155,7 +155,7 @@ test('“Find a better spot” procura um novo encaixe', async ({ page }) => {
 
   await page.locator('#btn-melhor-local').click();
 
-  await expect(page.locator('#forma-status')).toContainText('Melhor encaixe', {
+  await expect(page.locator('#forma-status')).toContainText('Better fit found', {
     timeout: 20_000,
   });
   await expect(page.locator('#btn-usar-rota')).toBeEnabled({ timeout: 15_000 });

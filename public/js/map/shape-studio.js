@@ -151,7 +151,7 @@ function dimensaoFormatada(metros) {
 }
 
 function resumoDaForma(forma) {
-  const nome = FORMAS_PAINEL[formaNome] ?? 'Forma';
+  const nome = FORMAS_PAINEL[formaNome] ?? 'Shape';
   if (!forma) return nome;
 
   const largura = forma.size * (forma.scaleX ?? 1);
@@ -195,7 +195,9 @@ function publicar(extra = {}) {
     resumo: resumoDaForma(forma),
     alvoKm,
     distanciaKm,
-    status: extra.status ?? (mensagem || 'Mova, rode ou redimensione: a rota acompanha as ruas.'),
+    status:
+      extra.status ??
+      (mensagem || 'Move, rotate or resize the shape: the route follows the streets as you go.'),
     podeUsar: Boolean(rota && rota.length >= 2) && estadoCalculo === 'pronto',
     calculando,
     ajustando,
@@ -246,7 +248,7 @@ export async function ajustarForma() {
 
   if (waypoints.length < 3) {
     estadoCalculo = 'erro';
-    mensagem = 'A forma é pequena demais para encaixar nas ruas. Aumente a distância alvo.';
+    mensagem = 'The shape is too small to snap to streets. Increase the target distance.';
     limparCamadaRota();
     rota = null;
     publicar();
@@ -254,7 +256,7 @@ export async function ajustarForma() {
   }
 
   estadoCalculo = 'calculando';
-  mensagem = 'Calculando rota nas ruas…';
+  mensagem = 'Fitting the route to the streets…';
   // A linha antiga não deve permanecer visível enquanto a nova é calculada.
   limparCamadaRota();
   rota = null;
@@ -265,17 +267,17 @@ export async function ajustarForma() {
 
   if (!resultado) {
     estadoCalculo = 'erro';
-    mensagem = 'Não foi possível encaixar a forma nas ruas. Tente outro local ou outra forma.';
+    mensagem = 'Could not fit the shape to the streets. Try another location or shape.';
     limparCamadaRota();
     rota = null;
     publicar();
-    mostrarToast('Não foi possível encaixar a forma nas ruas.', { tipo: 'erro' });
+    mostrarToast('Could not fit the shape to the streets.', { tipo: 'erro' });
     return null;
   }
 
   rota = resultado;
   estadoCalculo = 'pronto';
-  mensagem = 'Rota encaixada nas ruas. Use “Use this route” para incorporar ao desenho.';
+  mensagem = 'Route fitted to the streets. Use “Use this route” to keep it.';
   desenharRota();
   publicar();
   return resultado;
@@ -299,7 +301,7 @@ function iniciarTransformacao() {
   limparCamadaRota();
   rota = null;
   estadoCalculo = 'ajustando';
-  mensagem = 'Solte a alça para recalcular a rota nas ruas.';
+  mensagem = 'Release the handle to recalculate the route.';
   publicar();
 }
 
@@ -312,7 +314,7 @@ function finalizarTransformacao() {
 
   cancelarCalculo();
   estadoCalculo = 'calculando';
-  mensagem = 'Recalculando a rota nas ruas…';
+  mensagem = 'Recalculating the route…';
   publicar();
   void ajustarForma();
 }
@@ -443,7 +445,7 @@ export function atualizarAlvo(valorKm) {
   definirAlvoKm(alvoKm);
   atualizarForma(formaId, { size: tamanho });
   estadoCalculo = 'calculando';
-  mensagem = 'Ajustando a forma ao novo tamanho…';
+  mensagem = 'Resizing the shape…';
   publicar();
   agendarAjuste(120);
 }
@@ -477,7 +479,7 @@ export async function procurarMelhorEncaixe() {
   controlador?.abort();
   controlador = new AbortController();
   estadoCalculo = 'calculando';
-  mensagem = 'Procurando um melhor encaixe nas ruas…';
+  mensagem = 'Looking for a better fit…';
   publicar();
 
   const candidatos = [
@@ -518,19 +520,19 @@ export async function procurarMelhorEncaixe() {
   if (!melhor) {
     atualizarForma(formaId, { rotation: base.rotation, center: base.center });
     estadoCalculo = 'erro';
-    mensagem = 'Nenhum encaixe melhor encontrado por perto. Tente mover a forma.';
+    mensagem = 'No better fit found nearby. Try moving the shape.';
     publicar();
-    mostrarToast('Nenhum encaixe melhor encontrado por perto.', { tipo: 'aviso' });
+    mostrarToast('No better fit found nearby.', { tipo: 'aviso' });
     return false;
   }
 
   atualizarForma(formaId, { rotation: melhor.rotation, center: melhor.center });
   rota = melhor.rota;
   estadoCalculo = 'pronto';
-  mensagem = 'Melhor encaixe encontrado. Ajuste fino: arraste as alças verdes.';
+  mensagem = 'Better fit found. Fine-tune it with the green handles.';
   desenharRota();
   publicar();
-  mostrarToast('Melhor encaixe encontrado.', { tipo: 'sucesso', duracao: 2000 });
+  mostrarToast('Better fit found.', { tipo: 'sucesso', duracao: 2000 });
   return true;
 }
 
@@ -540,17 +542,17 @@ export async function procurarMelhorEncaixe() {
  */
 export async function usarRotaAtual() {
   if (!Array.isArray(rota) || rota.length < 2) {
-    mostrarToast('Calcule a rota da forma antes de usá-la.', { tipo: 'aviso' });
+    mostrarToast('Calculate the shape route before using it.', { tipo: 'aviso' });
     return false;
   }
   if (estadoCalculo === 'calculando' || estadoCalculo === 'ajustando') return false;
 
-  const nome = FORMAS_PAINEL[formaNome] ?? 'forma';
+  const nome = FORMAS_PAINEL[formaNome] ?? 'shape';
   const incorporada = await importarRota(rota);
   if (!incorporada) return false;
 
   fecharEstudioForma();
-  mostrarToast(`Rota da ${nome.toLowerCase()} adicionada ao desenho.`, {
+  mostrarToast(`${nome} route added to the drawing.`, {
     tipo: 'sucesso',
     duracao: 2500,
   });
@@ -563,7 +565,7 @@ export async function usarRotaAtual() {
  */
 export function removerFormaAtual() {
   fecharEstudioForma();
-  mostrarToast('Forma removida.', { tipo: 'info', duracao: 1800 });
+  mostrarToast('Shape removed.', { tipo: 'info', duracao: 1800 });
   aoSairDoModo();
 }
 

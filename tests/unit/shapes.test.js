@@ -143,11 +143,14 @@ describe('map/shapes — integração Leaflet (jsdom)', () => {
     const borda = alca('Escalar no eixo X (esquerda)');
     const rotacao = alca('Rodar forma');
 
-    expect(centro.options.icon.options.className).toContain('shape-handle--center');
-    expect(centro.options.icon.options.html).toContain('Drag to move shape');
-    expect(canto.options.icon.options.className).toContain('shape-handle--corner');
-    expect(borda.options.icon.options.className).toContain('shape-handle--edge-ew');
-    expect(rotacao.options.icon.options.className).toContain('shape-handle--rotation');
+    expect(centro.options.icon.options.html).toContain('shape-handle--center');
+    expect(centro.getTooltip()?.getContent()).toBe('Drag to move shape');
+    expect(centro.options.icon.options.iconSize).toEqual([50, 50]);
+    expect(canto.options.icon.options.html).toContain('shape-handle--corner');
+    expect(canto.options.icon.options.iconSize).toEqual([24, 24]);
+    expect(borda.options.icon.options.html).toContain('shape-handle--edge-ew');
+    expect(rotacao.options.icon.options.html).toContain('shape-handle--rotation');
+    expect(rotacao.options.icon.options.iconSize).toEqual([28, 28]);
 
     let haste = null;
     getMap().eachLayer((camada) => {

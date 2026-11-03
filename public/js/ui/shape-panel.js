@@ -10,12 +10,12 @@
  */
 
 export const FORMAS_PAINEL = Object.freeze({
-  triangulo: 'Triângulo',
-  estrela: 'Estrela',
-  hexagono: 'Hexágono',
+  triangulo: 'Triangle',
+  estrela: 'Star',
+  hexagono: 'Hexagon',
 });
 
-const formatador = new Intl.NumberFormat('pt-BR', {
+const formatador = new Intl.NumberFormat('en-US', {
   minimumFractionDigits: 1,
   maximumFractionDigits: 1,
 });
