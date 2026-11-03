@@ -2,6 +2,8 @@
 
 # Assets de terceiros: não normalizar EOL nem inspecionar diff textual
 public/vendor/** -text -diff
+public/fonts/OFL.txt -diff
 *.png binary
 *.jpg binary
 *.gif binary
+*.woff2 binary

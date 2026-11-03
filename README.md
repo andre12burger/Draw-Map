@@ -18,6 +18,7 @@ Projeto académico de **Cliente/Servidor** com arquitetura **frontend estático 
 - **Modo Lápis:** desenho livre com simplificação em pixels, subdivisão de trechos longos e roteamento em lote (40 pontos por requisição).
 - **Barra inferior em pílula:** perfis **Cycling/Walking/Free** e ferramentas **Points/Pencil/Shape**, além de **Clear All** e **Export GPX**.
 - **Shape + Auto-Fit:** o polígono é apenas um molde tracejado; até 25 waypoints amostrados (limite da API) são roteados nas ruas e a linha vermelha resultante é desenhada por cima. Inclui distância alvo, **Find a better spot** e **Use this route**, que consolida a geometria no desenho oficial e destrói o molde.
+- **Alças no estilo DrawMyLoop:** centro com tooltip **“Drag to move shape”**, cantos em círculos brancos, bordas em quadrados verdes e rotação num círculo branco com haste tracejada. Durante o arrasto a linha vermelha desaparece e o Auto-Fit só corre no `dragend`, com cancelamento de pedidos anteriores.
 - **Edição:** arrastar marcadores re-roteia os trechos vizinhos; botão direito numa linha insere um ponto intermediário — inclusive no último trecho.
 - **Undo (Ctrl+Z):** pilha de 50 estados, mantida em memória, com restauração transacional (sem corromper snapshots).
 - **Persistência versionada:** rota, modos, ferramenta, perfil, nome e posição do mapa no `LocalStorage`; histórico não é persistido para evitar estouro de cota.
@@ -195,7 +196,7 @@ Documentação detalhada das funções geodésicas e dos módulos de formas/imag
 ## 🧪 Testes e qualidade
 
 ```bash
-npm test               # 138 testes unitários (Vitest + jsdom)
+npm test               # 140 testes unitários (Vitest + jsdom)
 npm run test:coverage  # cobertura V8
 npm run lint           # ESLint 10 (flat config)
 npm run format:check   # Prettier
@@ -244,7 +245,8 @@ public/
     map/{map,render,draw,pencil,preview,distance,shapes,shape-studio,image-overlay}.js
     ui/{toolbar,shape-panel,search,stats,toast}.js
     export/gpx.js
-  vendor/leaflet/     # gerado por npm run vendor/postinstall
+  fonts/               # Geist (SIL OFL) usado no painel Shape
+  vendor/leaflet/      # gerado por npm run vendor/postinstall
 tests/
   unit/               # Vitest
   e2e/                # Playwright

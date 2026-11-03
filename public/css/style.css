@@ -1,3 +1,11 @@
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../fonts/geist-latin.woff2') format('woff2');
+}
+
 :root {
   --vermelho: #e53935;
   --vermelho-escuro: #b71c1c;
@@ -238,6 +246,21 @@ body {
   gap: 12px;
 }
 
+.painel-secao:not([hidden]) {
+  animation: painel-entrar 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes painel-entrar {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 .painel-cabecalho {
   display: flex;
   align-items: center;
@@ -346,8 +369,42 @@ body {
 }
 
 /* ==========================================
-   PAINEL DA FORMA (Shape)
+   PAINEL DA FORMA (Shape) — tokens do DML
    ========================================== */
+.painel-forma {
+  --forma-ink: #23201b;
+  --forma-body: #474136;
+  --forma-muted: #645d4d;
+  --forma-card: #fbf8ef;
+  --forma-sunken: #f4efe2;
+  --forma-accent: #d63b22;
+  --forma-accent-hover: #b8321c;
+  --forma-success: #2e8b7a;
+  font-family:
+    Geist,
+    'Geist Fallback',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  color: var(--forma-body);
+}
+
+body.modo-forma .painel-contexto {
+  width: min(340px, calc(100vw - 28px));
+  border: 2px solid var(--forma-ink, #23201b);
+  border-radius: 22px;
+  background: #fbf8ef;
+  box-shadow: 3px 3px 0 #23201b;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.painel-forma .painel-titulo {
+  color: var(--forma-ink);
+  font-size: 16px;
+  font-weight: 600;
+}
+
 .forma-opcoes {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -359,44 +416,70 @@ body {
   justify-items: center;
   gap: 5px;
   padding: 9px 4px 7px;
-  border: 1.5px solid var(--borda);
+  border: 2px solid transparent;
   border-radius: 14px;
-  background: #fff;
-  color: var(--texto-suave);
-  font-size: 10.5px;
-  font-weight: 700;
+  background: transparent;
+  color: var(--forma-body, #474136);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 500;
   cursor: pointer;
   transition:
     border-color 0.15s ease,
     background 0.15s ease,
-    transform 0.15s ease;
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.painel-forma:not([hidden]) .forma-opcao {
+  animation: forma-entrar 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.painel-forma:not([hidden]) .forma-opcao:nth-child(2) {
+  animation-delay: 35ms;
+}
+
+.painel-forma:not([hidden]) .forma-opcao:nth-child(3) {
+  animation-delay: 70ms;
+}
+
+@keyframes forma-entrar {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .forma-opcao svg {
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   fill: none;
-  stroke: var(--verde-escuro);
+  stroke: var(--forma-ink, #23201b);
   stroke-width: 4;
   stroke-linejoin: round;
 }
 
 .forma-opcao:hover {
-  border-color: #b9c7c2;
-  transform: translateY(-1px);
+  border-color: rgba(35, 32, 27, 0.35);
+  background: var(--forma-sunken, #f4efe2);
 }
 
 .forma-opcao.ativo {
-  border-color: var(--tinta);
-  background: #f2faf7;
-  color: var(--tinta);
-  box-shadow: 0 0 0 2px rgba(16, 20, 24, 0.08);
+  border-color: var(--forma-ink, #23201b);
+  background: #fff8e0;
+  color: var(--forma-ink, #23201b);
+  box-shadow: 2px 2px 0 var(--forma-ink, #23201b);
+  transform: scale(1.05);
 }
 
 .forma-resumo {
   margin: 0;
-  color: var(--texto-suave);
-  font-size: 11.5px;
+  color: var(--forma-body, #474136);
+  font-size: 12px;
 }
 
 .campo-alvo {
@@ -404,40 +487,42 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 9px 12px;
-  border-radius: var(--raio-pequeno);
-  background: var(--fundo-suave);
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--forma-sunken, #f4efe2);
 }
 
 .campo-alvo__rotulo {
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--texto-suave);
+  color: var(--forma-muted, #645d4d);
+  font-size: 12px;
+  font-weight: 400;
 }
 
 .campo-alvo__valor {
   display: inline-flex;
   align-items: baseline;
   gap: 5px;
-  font-size: 11.5px;
-  color: var(--texto-suave);
+  color: var(--forma-body, #474136);
+  font-size: 14px;
 }
 
 .campo-alvo__valor input {
-  width: 74px;
-  padding: 5px 6px;
-  border: 1px solid var(--borda);
-  border-radius: 9px;
-  background: #fff;
-  color: var(--texto);
+  width: 80px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--forma-ink, #23201b);
+  border-radius: 8px;
+  background: var(--forma-card, #fbf8ef);
+  color: var(--forma-ink, #23201b);
+  font-family: inherit;
   font-size: 16px;
-  font-weight: 700;
-  text-align: right;
+  font-weight: 600;
+  text-align: left;
 }
 
 .forma-dica {
   margin: -4px 0 0;
-  color: var(--texto-suave);
+  color: var(--forma-body, #474136);
   font-size: 11px;
   line-height: 1.4;
 }
@@ -451,59 +536,150 @@ body {
 
 .forma-medidas div {
   padding: 8px 10px;
-  border: 1px solid var(--borda);
-  border-radius: var(--raio-pequeno);
-  background: #fff;
+  border: 1px solid #ece6d6;
+  border-radius: 8px;
+  background: var(--forma-card, #fbf8ef);
 }
 
 .forma-medidas dt {
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  color: var(--forma-muted, #645d4d);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--texto-suave);
 }
 
 .forma-medidas dd {
   margin: 2px 0 0;
+  color: var(--forma-ink, #23201b);
   font-size: 14px;
-  font-weight: 800;
-  color: var(--texto);
+  font-weight: 600;
 }
 
 .forma-medidas dd[data-tendencia='alvo'] {
-  color: var(--verde);
+  color: var(--forma-success, #2e8b7a);
 }
 
 .forma-medidas dd[data-tendencia='acima'] {
-  color: var(--vermelho);
+  color: var(--forma-accent, #d63b22);
 }
 
 .forma-medidas dd[data-tendencia='abaixo'] {
-  color: #b26a00;
+  color: #8a5a00;
 }
 
 .forma-status {
   margin: 0;
-  padding: 9px 11px;
-  border-left: 3px solid var(--verde-escuro);
-  border-radius: 10px;
-  background: #eef7f4;
-  color: #23524b;
-  font-size: 11.5px;
-  line-height: 1.4;
+  padding: 12px;
+  border: 1px solid var(--forma-success, #2e8b7a);
+  border-radius: 8px;
+  background: var(--forma-sunken, #f4efe2);
+  color: var(--forma-body, #474136);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
-.painel-forma[data-estado='calculando'] .forma-status {
-  border-left-color: #e8a33d;
-  background: #fdf6e8;
+.painel-forma[data-estado='calculando'] .forma-status,
+.painel-forma[data-estado='ajustando'] .forma-status {
+  border-color: #e8a33d;
+  background: #fff8e0;
   color: #7a5410;
 }
 
+.painel-forma[data-estado='ajustando'] .forma-status {
+  border-color: #3b82f6;
+  background: #eef4ff;
+  color: #1d4ed8;
+}
+
 .painel-forma[data-estado='incompleto'] .forma-status {
-  border-left-color: var(--vermelho);
+  border-color: #b3261e;
   background: #fdeeee;
   color: #8d2421;
+}
+
+/* CTAs do DML: accent sólido + botão outline com borda de tinta. */
+.painel-forma #btn-melhor-local {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--forma-accent, #d63b22);
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.painel-forma #btn-melhor-local:hover:not(:disabled) {
+  background: var(--forma-accent-hover, #b8321c);
+}
+
+.painel-forma #btn-usar-rota {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--forma-ink, #23201b);
+  border-radius: 8px;
+  background: var(--forma-card, #fbf8ef);
+  color: var(--forma-ink, #23201b);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.painel-forma #btn-usar-rota:hover:not(:disabled) {
+  background: var(--forma-sunken, #f4efe2);
+}
+
+.painel-forma #btn-remover-forma {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--forma-muted, #645d4d);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.painel-forma #btn-remover-forma:hover {
+  color: var(--forma-accent, #d63b22);
+}
+
+/* Loading subtil nos CTAs do Auto-Fit */
+.painel-forma[data-estado='calculando'] #btn-melhor-local::after,
+.painel-forma[data-estado='calculando'] #btn-usar-rota::after {
+  content: '';
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  margin-left: 8px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  vertical-align: -1px;
+  animation: girar 0.7s linear infinite;
+}
+
+.btn[aria-busy='true'] {
+  cursor: progress;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ==========================================
@@ -851,47 +1027,187 @@ body.ocupado #map {
 /* ==========================================
    ALÇAS DE TRANSFORMAÇÃO
    ========================================== */
-.shape-handle,
+/* Wrapper transparente do divIcon (área de toque maior, igual ao DML). */
+.shape-handle-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.shape-handle-icon--center {
+  cursor: move;
+}
+
+.shape-handle-icon.arrastando {
+  cursor: grabbing;
+}
+
+.shape-handle-hit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.shape-handle {
+  will-change: transform, box-shadow;
+  transition:
+    transform 0.1s ease-out,
+    box-shadow 0.1s ease-out;
+}
+
+/* Cantos: círculos brancos, 20×20 (outer 24×24) — CSS do DML. */
+.shape-handle--corner {
+  cursor: nwse-resize;
+  touch-action: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #23201b;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(35, 32, 27, 0.3);
+}
+
+.shape-handle--corner:hover {
+  border-width: 3px;
+  border-color: #23201b;
+  background: #fff;
+  transform: scale(1.25);
+}
+
+.shape-handle--corner:active {
+  background: #e6f1ee;
+  transform: scale(1.15);
+}
+
+/* Bordas: quadrados verdes, 24×24 (outer 28×28) — CSS do DML. */
+.shape-handle--edge {
+  display: block;
+  width: 24px;
+  height: 24px;
+  border: 2px solid #246e61;
+  border-radius: 3px;
+  background: #2e8b7a;
+  box-shadow: 0 1px 4px #23201b40;
+  cursor: default;
+  touch-action: none;
+}
+
+.shape-handle--edge-ew {
+  cursor: ew-resize;
+}
+
+.shape-handle--edge-ns {
+  cursor: ns-resize;
+}
+
+.shape-handle--edge:hover {
+  border-width: 3px;
+  border-color: #246e61;
+  background: #2e8b7a;
+  box-shadow: 0 2px 8px #23201b4d;
+  transform: scale(1.25);
+}
+
+.shape-handle--edge:active {
+  background: #2e8b7a;
+  box-shadow: 0 3px 10px #23201b59;
+  transform: scale(1.15);
+}
+
+/* Rotação: círculo verde com borda branca, 24×24 (outer 28×28). */
+.shape-handle--rotation {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #246e61;
+  border-radius: 50%;
+  background: #2e8b7a;
+  box-shadow: 0 1px 4px rgba(35, 32, 27, 0.35);
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%232E8B7A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8'/%3E%3Cpath d='M3 3v5h5'/%3E%3C/svg%3E")
+      12 12,
+    crosshair;
+  touch-action: none;
+}
+
+.shape-handle--rotation:hover {
+  transform: scale(1.25);
+}
+
+.shape-handle--rotation:active {
+  transform: scale(1.15);
+}
+
+/* Centro: círculo verde com borda branca e ponto central de 6 px. */
+.shape-handle--center {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: #2e8b7a;
+  box-shadow: 0 1px 4px rgba(35, 32, 27, 0.35);
+  cursor: move;
+  transition: transform 0.1s ease-out;
+}
+
+.shape-handle--center::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  transform: translate(-50%, -50%);
+}
+
+.shape-handle--center:hover {
+  transform: scale(1.15);
+}
+
+.shape-handle--center:active,
+.shape-handle--center.arrastando {
+  cursor: grabbing;
+  transform: scale(1.2);
+}
+
+/* Tooltip nativo do Leaflet, com a fonte do DML. */
+.shape-handle-tooltip {
+  font-family: Geist, 'Geist Fallback', system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.shape-handle-stem {
+  pointer-events: none;
+}
+
+/* Alças da imagem de referência (design próprio, mantido). */
 .image-handle {
   box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid var(--verde-escuro);
+  width: 100%;
+  height: 100%;
+  border: 2px solid #6d4c41;
   border-radius: 50%;
   background: #fff;
-  color: var(--verde-escuro);
+  color: #6d4c41;
   font-size: 11px;
   line-height: 1;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
   cursor: grab;
 }
 
-.shape-handle:active,
 .image-handle:active {
   cursor: grabbing;
-}
-
-.shape-handle--center {
-  border-radius: 5px;
-  background: var(--verde-escuro);
-  color: #fff;
-}
-
-.shape-handle--rotation {
-  border-color: var(--vermelho);
-  color: var(--vermelho);
-}
-
-.shape-handle--corner,
-.shape-handle--edge-ew,
-.shape-handle--edge-ns {
-  border-radius: 3px;
-}
-
-.image-handle {
-  border-color: #6d4c41;
-  color: #6d4c41;
 }
 
 .image-handle--center {

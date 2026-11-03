@@ -42,7 +42,7 @@ export function criarEstrela(pontas = 5, raioInterno = 0.4) {
 
   return {
     id: 'estrela',
-    name: 'Estrela',
+    name: 'Star',
     type: 'polygon',
     closed: true,
     tension: 0.5,
@@ -68,7 +68,7 @@ export function criarPoligonoRegular(lados = 6) {
 
   return {
     id: 'poligono',
-    name: 'Polígono',
+    name: 'Polygon',
     type: 'polygon',
     closed: true,
     tension: 0.5,
@@ -170,16 +170,30 @@ const formas = new Map();
 let contadorId = 0;
 
 function iconeAlca(tipo, html) {
+  const centro = tipo === 'center';
+  const tamanho = centro ? 50 : tipo === 'corner' ? 24 : 28;
+
+  let conteudo;
+  if (centro) {
+    conteudo = '<span class="shape-handle-hit"><span class="shape-handle--center"></span></span>';
+  } else {
+    const classes =
+      tipo === 'edge-ew' || tipo === 'edge-ns'
+        ? `shape-handle shape-handle--edge shape-handle--${tipo}`
+        : `shape-handle shape-handle--${tipo}`;
+    conteudo = `<span class="${classes}" aria-hidden="true">${html}</span>`;
+  }
+
   return L.divIcon({
-    className: `shape-handle shape-handle--${tipo}`,
-    html: `<span aria-hidden="true">${html}</span>`,
-    iconSize: [16, 16],
-    iconAnchor: [8, 8],
+    className: centro ? 'shape-handle-icon shape-handle-icon--center' : 'shape-handle-icon',
+    html: conteudo,
+    iconSize: [tamanho, tamanho],
+    iconAnchor: [tamanho / 2, tamanho / 2],
   });
 }
 
 function criarMarcadorAlca(posicao, tipo, html, titulo) {
-  return L.marker([posicao.lat, posicao.lng], {
+  const marcador = L.marker([posicao.lat, posicao.lng], {
     icon: iconeAlca(tipo, html),
     draggable: true,
     keyboard: false,
@@ -187,6 +201,17 @@ function criarMarcadorAlca(posicao, tipo, html, titulo) {
     alt: titulo,
     zIndexOffset: 1000,
   }).addTo(getMap());
+
+  if (tipo === 'center') {
+    marcador.bindTooltip('Drag to move shape', {
+      direction: 'top',
+      offset: [0, -16],
+      opacity: 1,
+      className: 'shape-handle-tooltip',
+    });
+  }
+
+  return marcador;
 }
 
 /**
@@ -254,6 +279,7 @@ function posicoesAlcas(estado) {
 
 let ultimaAtualizacao = 0;
 let quadroAnimacao = null;
+let temporizadorFimTransformacao = null;
 
 function agendarRender(estado) {
   const executar = (agora) => {
@@ -383,13 +409,27 @@ function aplicarArrasto(estado, marcador, inicial) {
   agendarRender(estado);
 }
 
+function marcarArrastando(marcador, ativo) {
+  const raiz = marcador.getElement();
+  if (!raiz) return;
+
+  raiz.classList.toggle('arrastando', ativo);
+  raiz.querySelector('.shape-handle--center, .shape-handle')?.classList.toggle('arrastando', ativo);
+  if (ativo) marcador.openTooltip();
+  else marcador.closeTooltip();
+}
+
 function ligarAlca(estado, chave, marcador) {
   const mapa = getMap();
   let inicial = null;
 
   marcador.on('dragstart', () => {
+    clearTimeout(temporizadorFimTransformacao);
+    temporizadorFimTransformacao = null;
     mapa.dragging.disable();
+    marcarArrastando(marcador, true);
     inicial = snapshotAlca(estado, chave, marcador);
+    estado.callbacks.onTransformStart?.(estadoPublico(estado));
   });
 
   marcador.on('drag', () => {
@@ -399,33 +439,41 @@ function ligarAlca(estado, chave, marcador) {
 
   marcador.on('dragend', () => {
     mapa.dragging.enable();
+    marcarArrastando(marcador, false);
     renderizar(estado);
 
-    if (inicial?.tipo === 'center') {
-      estado.callbacks.onMove?.(estadoPublico(estado));
-    }
-
-    setTimeout(
-      () => estado.callbacks.onTransformEnd?.(estadoPublico(estado)),
-      ATRASO_FIM_TRANSFORMACAO_MS,
-    );
+    clearTimeout(temporizadorFimTransformacao);
+    temporizadorFimTransformacao = setTimeout(() => {
+      temporizadorFimTransformacao = null;
+      estado.callbacks.onTransformEnd?.(estadoPublico(estado));
+    }, ATRASO_FIM_TRANSFORMACAO_MS);
     inicial = null;
   });
 }
 
 function criarAlcas(estado) {
   const definicoes = [
-    ['center', 'center', '✥', 'Mover forma'],
+    ['center', 'center', '', 'Mover forma'],
     ['nw', 'corner', '', 'Redimensionar'],
     ['ne', 'corner', '', 'Redimensionar'],
     ['sw', 'corner', '', 'Redimensionar'],
     ['se', 'corner', '', 'Redimensionar'],
-    ['rotation', 'rotation', '↻', 'Rodar forma'],
-    ['left', 'edge-ew', '⇔', 'Escalar no eixo X (esquerda)'],
-    ['right', 'edge-ew', '⇔', 'Escalar no eixo X (direita)'],
-    ['top', 'edge-ns', '⇕', 'Escalar no eixo Y (topo)'],
-    ['bottom', 'edge-ns', '⇕', 'Escalar no eixo Y (base)'],
+    ['rotation', 'rotation', '', 'Rodar forma'],
+    ['left', 'edge-ew', '', 'Escalar no eixo X (esquerda)'],
+    ['right', 'edge-ew', '', 'Escalar no eixo X (direita)'],
+    ['top', 'edge-ns', '', 'Escalar no eixo Y (topo)'],
+    ['bottom', 'edge-ns', '', 'Escalar no eixo Y (base)'],
   ];
+
+  // Haste visual que liga o topo da forma à alça de rotação.
+  estado.haste = L.polyline([], {
+    color: '#0f766e',
+    weight: 1.5,
+    opacity: 0.75,
+    dashArray: '4 4',
+    interactive: false,
+    className: 'shape-handle-stem',
+  }).addTo(getMap());
 
   for (const [chave, tipo, html, titulo] of definicoes) {
     const marcador = criarMarcadorAlca({ lat: 0, lng: 0 }, tipo, html, titulo);
@@ -441,6 +489,13 @@ function atualizarAlcas(estado) {
   for (const [chave, marcador] of estado.alcas) {
     const posicao = posicoes[chave];
     if (posicao) marcador.setLatLng([posicao.lat, posicao.lng]);
+  }
+
+  if (estado.haste) {
+    estado.haste.setLatLngs([
+      [posicoes.top.lat, posicoes.top.lng],
+      [posicoes.rotation.lat, posicoes.rotation.lng],
+    ]);
   }
 }
 
@@ -485,6 +540,7 @@ export function criarForma({
     callbacks: callbacks ?? {},
     camadas: [],
     alcas: new Map(),
+    haste: null,
     latlngs: [],
     visivel: false,
   };
@@ -555,6 +611,10 @@ export function definirVisibilidade(id, visivel) {
     if (mostrar) marcador.addTo(mapa);
     else mapa.removeLayer(marcador);
   }
+  if (estado.haste) {
+    if (mostrar) estado.haste.addTo(mapa);
+    else mapa.removeLayer(estado.haste);
+  }
 
   estado.visivel = mostrar;
   return true;
@@ -570,13 +630,17 @@ export function removerForma(id) {
   if (!estado) return false;
 
   estado.removido = true;
+  clearTimeout(temporizadorFimTransformacao);
+  temporizadorFimTransformacao = null;
 
   const mapa = getMap();
   for (const camada of estado.camadas) mapa.removeLayer(camada);
   for (const marcador of estado.alcas.values()) mapa.removeLayer(marcador);
+  if (estado.haste) mapa.removeLayer(estado.haste);
 
   estado.camadas = [];
   estado.alcas.clear();
+  estado.haste = null;
   formas.delete(id);
   return true;
 }

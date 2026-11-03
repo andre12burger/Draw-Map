@@ -148,43 +148,43 @@
             class="forma-opcao"
             data-forma="triangulo"
             aria-pressed="false"
-            title="Triângulo"
+            title="Triangle"
           >
             <svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
               <polygon points="50,14 88,84 12,84" />
             </svg>
-            <span>Triângulo</span>
+            <span>Triangle</span>
           </button>
           <button
             type="button"
             class="forma-opcao ativo"
             data-forma="estrela"
             aria-pressed="true"
-            title="Estrela"
+            title="Star"
           >
             <svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
               <polygon points="50,8 61,37 92,37 67,56 76,86 50,68 24,86 33,56 8,37 39,37" />
             </svg>
-            <span>Estrela</span>
+            <span>Star</span>
           </button>
           <button
             type="button"
             class="forma-opcao"
             data-forma="hexagono"
             aria-pressed="false"
-            title="Hexágono"
+            title="Hexagon"
           >
             <svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
               <polygon points="50,8 86,29 86,71 50,92 14,71 14,29" />
             </svg>
-            <span>Hexágono</span>
+            <span>Hexagon</span>
           </button>
         </div>
 
-        <p id="forma-resumo" class="forma-resumo">Estrela · 2,0 km × 2,0 km · 0°</p>
+        <p id="forma-resumo" class="forma-resumo">Star · 2.0 km × 2.0 km · 0°</p>
 
         <label class="campo-alvo" for="input-alvo">
-          <span class="campo-alvo__rotulo">Distância alvo</span>
+          <span class="campo-alvo__rotulo">Target distance</span>
           <span class="campo-alvo__valor">
             <input
               type="number"
@@ -199,31 +199,83 @@
           </span>
         </label>
         <p class="forma-dica">
-          Comprimento do molde. O Auto-Fit procura ruas próximas para chegar perto deste valor.
+          Length of your shape. Change it to make the shape bigger or smaller.
         </p>
 
         <dl class="forma-medidas">
           <div>
-            <dt>Rota atual</dt>
+            <dt>Current route</dt>
             <dd id="forma-distancia">—</dd>
           </div>
           <div>
-            <dt>Diferença</dt>
+            <dt>Difference</dt>
             <dd id="forma-diferenca">—</dd>
           </div>
         </dl>
 
         <p id="forma-status" class="forma-status" role="status" aria-live="polite">
-          Mova, rode ou redimensione: a rota acompanha as ruas.
+          Move, rotate or resize the shape: the route follows the streets as you go.
         </p>
 
         <button type="button" id="btn-melhor-local" class="btn btn-perigo">
-          🎯 Find a better spot
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="10"></circle>
+            <circle cx="12" cy="12" r="6"></circle>
+            <circle cx="12" cy="12" r="2"></circle>
+          </svg>
+          Find a better spot
         </button>
         <button type="button" id="btn-usar-rota" class="btn btn-contorno" disabled>
-          ↳ Use this route
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="6" cy="19" r="3"></circle>
+            <path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"></path>
+            <circle cx="18" cy="5" r="3"></circle>
+          </svg>
+          Use this route
         </button>
-        <button type="button" id="btn-remover-forma" class="btn btn-texto">🗑️ Remove shape</button>
+        <button type="button" id="btn-remover-forma" class="btn btn-texto">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M10 11v6"></path>
+            <path d="M14 11v6"></path>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path>
+            <path d="M3 6h18"></path>
+            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+          Remove shape
+        </button>
       </section>
     </aside>
 

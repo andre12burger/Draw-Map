@@ -40,6 +40,22 @@ function painelForma() {
   return document.getElementById('painel-forma');
 }
 
+function camadaRota() {
+  let encontrada = null;
+  getMap().eachLayer((camada) => {
+    if (camada.options?.className === 'rota-forma') encontrada = camada;
+  });
+  return encontrada;
+}
+
+function alca(titulo) {
+  let encontrada = null;
+  getMap().eachLayer((camada) => {
+    if (camada.options?.title === titulo) encontrada = camada;
+  });
+  return encontrada;
+}
+
 describe('map/shape-studio — Auto-Fit e “Use this route”', () => {
   beforeAll(async () => {
     const html = fs.readFileSync(path.resolve('public/index.html'), 'utf8');
@@ -133,6 +149,38 @@ describe('map/shape-studio — Auto-Fit e “Use this route”', () => {
     expect(depois.shape.id).toBe('poligono');
     expect(depois.center.lat).toBeCloseTo(antes.center.lat, 6);
     expect(depois.center.lng).toBeCloseTo(antes.center.lng, 6);
+  });
+
+  it('esconde a rota durante o arrasto e só recalcula no dragend', async () => {
+    abrirEstudioForma();
+    await ajustarForma();
+    expect(camadaRota()).not.toBeNull();
+
+    const chamadas = rotearPontos.mock.calls.length;
+    const marcador = alca('Mover forma');
+    const inicial = marcador.getLatLng();
+
+    marcador.fire('dragstart');
+    expect(camadaRota()).toBeNull();
+    expect(painelForma().dataset.estado).toBe('ajustando');
+    expect(painelForma().classList.contains('calculando')).toBe(true);
+    expect(painelForma().getAttribute('aria-busy')).toBe('true');
+    expect(document.getElementById('btn-usar-rota').disabled).toBe(true);
+    expect(rotearPontos).toHaveBeenCalledTimes(chamadas);
+
+    marcador.setLatLng([inicial.lat + 0.001, inicial.lng + 0.001]);
+    marcador.fire('drag');
+    expect(rotearPontos).toHaveBeenCalledTimes(chamadas);
+
+    marcador.fire('dragend');
+    vi.advanceTimersByTime(60);
+    for (let i = 0; i < 6; i += 1) await Promise.resolve();
+
+    expect(rotearPontos).toHaveBeenCalledTimes(chamadas + 1);
+    expect(camadaRota()).not.toBeNull();
+    expect(painelForma().dataset.estado).toBe('pronto');
+    expect(painelForma().getAttribute('aria-busy')).toBe('false');
+    expect(document.getElementById('btn-usar-rota').disabled).toBe(false);
   });
 
   it('“Use this route” injeta a rota no desenho e destrói o molde', async () => {

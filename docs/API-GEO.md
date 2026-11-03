@@ -159,27 +159,40 @@ Equivalente ao `ek` do DrawMyLoop:
 
 ### API
 
-| Função                                                                                     | Descrição                                                                                                                                                             |
-| ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `criarForma({ id, shape, center, size, rotation, scaleX, scaleY, interativa, callbacks })` | Cria/substitui a forma e as 10 alças. `shape` aceita `'estrela'`, `'hexagono'`, `'triangulo'` ou um objeto `{ points, type, closed, tension, aspectRatio, strokes }`. |
-| `atualizarForma(id, patch)`                                                                | Atualiza `center`, `size` (mín. 25 m), `rotation` (normalizada), `scaleX`/`scaleY` (mín. 0.1) e `visible`.                                                            |
-| `definirVisibilidade(id, visivel)`                                                         | Mostra/esconde camadas e alças.                                                                                                                                       |
-| `removerForma(id)` / `limparFormas()`                                                      | Remove forma(s) e alças (com guarda contra frames pendentes).                                                                                                         |
-| `getForma(id)` / `listarFormas()`                                                          | Estado público (sem camadas).                                                                                                                                         |
-| `inicializarFormas()`                                                                      | Garante o mapa (idempotente).                                                                                                                                         |
+| Função                                                                                     | Descrição                                                                                                                                                                                 |
+| ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `criarForma({ id, shape, center, size, rotation, scaleX, scaleY, interativa, callbacks })` | Cria/substitui a forma, as 10 alças e a haste de rotação. `shape` aceita `'estrela'`, `'hexagono'`, `'triangulo'` ou um objeto `{ points, type, closed, tension, aspectRatio, strokes }`. |
+| `atualizarForma(id, patch)`                                                                | Atualiza `center`, `size` (mín. 25 m), `rotation` (normalizada), `scaleX`/`scaleY` (mín. 0.1) e `visible`.                                                                                |
+| `definirVisibilidade(id, visivel)`                                                         | Mostra/esconde camadas e alças.                                                                                                                                                           |
+| `removerForma(id)` / `limparFormas()`                                                      | Remove forma(s) e alças (com guarda contra frames pendentes).                                                                                                                             |
+| `getForma(id)` / `listarFormas()`                                                          | Estado público (sem camadas).                                                                                                                                                             |
+| `inicializarFormas()`                                                                      | Garante o mapa (idempotente).                                                                                                                                                             |
 
 ### Alças (todas `L.divIcon`, com `map.dragging` desativado durante o arrasto)
 
-| Alça       | Classe                                | Comportamento                                                                                                    |
-| ---------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Centro     | `shape-handle--center`                | Move preservando o offset `center − bboxCenter`; `onMoveLive` por frame (≈32 ms) e `onMove` no `dragend`.        |
-| Cantos (4) | `shape-handle--corner`                | Escala uniforme `size * distAtual / distInicial`, mínimo **25 m**.                                               |
-| Superior   | `shape-handle--rotation`              | `rotation = (rotacaoInicial − (anguloAtual − anguloInicial)) mod 360`; `atan2(dLng, dLat)` com eixo Y invertido. |
-| Bordas     | `shape-handle--edge-ew` / `--edge-ns` | Escala não-uniforme pelo rácio da bounding box (`(maxLng − lng) / largura`, etc.), mínimo **0.1**.               |
+| Alça       | Classe                                | Comportamento                                                                                                                         |
+| ---------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Centro     | `shape-handle--center`                | Círculo verde com tooltip **“Drag to move shape”**; move preservando o offset `center − bboxCenter`; `onMoveLive` por frame (≈32 ms). |
+| Cantos (4) | `shape-handle--corner`                | Círculos brancos com contorno verde; escala uniforme `size * distAtual / distInicial`, mínimo **25 m**.                               |
+| Superior   | `shape-handle--rotation`              | Círculo branco numa haste tracejada (`shape-handle-stem`); `rotation = (rotacaoInicial − (anguloAtual − anguloInicial)) mod 360`.     |
+| Bordas     | `shape-handle--edge-ew` / `--edge-ns` | Quadrados verdes; escala não-uniforme pelo rácio da bounding box (`(maxLng − lng) / largura`, etc.), mínimo **0.1**.                  |
 
-`dragend` reativa o pan e chama `onTransformEnd` após 50 ms (para o Leaflet
-terminar o evento). O `center` da alça central é o centro da **bounding box**,
-garantindo que o offset não provoca saltos.
+`dragstart` dispara `onTransformStart`, que aborta cálculos pendentes e esconde a
+linha vermelha; nenhum pedido é feito durante o movimento. `dragend` reativa o pan
+e agenda `onTransformEnd` após 50 ms (para o Leaflet terminar o evento), que
+recalcula a rota uma única vez, cancelando pedidos antigos com `AbortController`.
+O `center` da alça central é o centro da **bounding box**, garantindo que o offset
+não provoca saltos.
+
+### Tokens extraídos do dump DML
+
+- Verde principal `#2e8b7a` (`--sapin-500`) e verde escuro `#246e61` (`--sapin-600`).
+- Tinta `#23201b` (`--warm-900`) para bordas e texto forte; corpo `#474136`; muted `#645d4d`.
+- Superfícies `#fbf8ef` (card) e `#f4efe2` (sunken); destaque `#fff8e0`.
+- CTA de Auto-Fit `#d63b22`; sucesso `#2e8b7a`.
+- Alças: canto 20×20 (icon 24×24), borda 24×24 (icon 28×28), rotação 24×24
+  (icon 28×28) e centro 20×20 (icon 50×50).
+- Fonte **Geist** (SIL OFL), servida localmente em `public/fonts/geist-latin.woff2`.
 
 ---
 
