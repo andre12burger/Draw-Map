@@ -189,6 +189,7 @@ function publicar(extra = {}) {
   const forma = formaId ? getForma(formaId) : null;
   const distanciaKm = Array.isArray(rota) ? totalLength(rota) / 1000 : null;
   const calculando = estadoCalculo === 'calculando';
+  const ajustando = estadoCalculo === 'ajustando';
 
   atualizarPainelForma({
     resumo: resumoDaForma(forma),
@@ -197,6 +198,7 @@ function publicar(extra = {}) {
     status: extra.status ?? (mensagem || 'Mova, rode ou redimensione: a rota acompanha as ruas.'),
     podeUsar: Boolean(rota && rota.length >= 2) && estadoCalculo === 'pronto',
     calculando,
+    ajustando,
   });
 }
 
@@ -253,6 +255,9 @@ export async function ajustarForma() {
 
   estadoCalculo = 'calculando';
   mensagem = 'Calculando rota nas ruas…';
+  // A linha antiga não deve permanecer visível enquanto a nova é calculada.
+  limparCamadaRota();
+  rota = null;
   publicar();
 
   const resultado = await rotearWaypoints(waypoints, controlador.signal);
@@ -285,11 +290,31 @@ export function agendarAutoFit(atraso = ATRASO_AJUSTE_MS) {
   agendarAjuste(atraso);
 }
 
-function callbackTransformacao() {
+/**
+ * Chamado no `dragstart` das alças: aborta cálculos pendentes e esconde a
+ * linha vermelha. Nenhuma requisição é feita enquanto a alça está a ser movida.
+ */
+function iniciarTransformacao() {
+  cancelarCalculo();
+  limparCamadaRota();
+  rota = null;
+  estadoCalculo = 'ajustando';
+  mensagem = 'Solte a alça para recalcular a rota nas ruas.';
+  publicar();
+}
+
+/**
+ * Chamado após o `dragend` das alças: recalcula imediatamente a rota, já com
+ * a geometria final do molde, cancelando qualquer pedido anterior.
+ */
+function finalizarTransformacao() {
+  if (!formaId) return;
+
+  cancelarCalculo();
   estadoCalculo = 'calculando';
   mensagem = 'Recalculando a rota nas ruas…';
   publicar();
-  agendarAjuste(120);
+  void ajustarForma();
 }
 
 function criarFormaNoMapa({ centro, tamanho, rotacao = 0 } = {}) {
@@ -304,8 +329,8 @@ function criarFormaNoMapa({ centro, tamanho, rotacao = 0 } = {}) {
     rotation: rotacao,
     interativa: true,
     callbacks: {
-      onTransformEnd: callbackTransformacao,
-      onMove: callbackTransformacao,
+      onTransformStart: iniciarTransformacao,
+      onTransformEnd: finalizarTransformacao,
       onSizeChange: () => publicar(),
       onRotationChange: () => publicar(),
       onScaleChange: () => publicar(),
@@ -404,6 +429,10 @@ export function atualizarAlvo(valorKm) {
   const perimetro = perimetroDaForma(forma);
   if (perimetro <= 1) return;
 
+  cancelarCalculo();
+  limparCamadaRota();
+  rota = null;
+
   const tamanho = limitar(
     forma.size * ((alvo * 1000) / perimetro),
     SHAPE_MIN_SIZE_M,
@@ -437,10 +466,12 @@ function deslocarCentro(centro, metros, azimuteGraus) {
 export async function procurarMelhorEncaixe() {
   const base = formaId ? getForma(formaId) : null;
   if (!base) return false;
-  if (estadoCalculo === 'calculando') return false;
+  if (estadoCalculo === 'calculando' || estadoCalculo === 'ajustando') return false;
 
   clearTimeout(temporizador);
   temporizador = null;
+  limparCamadaRota();
+  rota = null;
 
   const meu = ++versao;
   controlador?.abort();
@@ -512,7 +543,7 @@ export async function usarRotaAtual() {
     mostrarToast('Calcule a rota da forma antes de usá-la.', { tipo: 'aviso' });
     return false;
   }
-  if (estadoCalculo === 'calculando') return false;
+  if (estadoCalculo === 'calculando' || estadoCalculo === 'ajustando') return false;
 
   const nome = FORMAS_PAINEL[formaNome] ?? 'forma';
   const incorporada = await importarRota(rota);

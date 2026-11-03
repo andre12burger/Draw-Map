@@ -254,6 +254,7 @@ function posicoesAlcas(estado) {
 
 let ultimaAtualizacao = 0;
 let quadroAnimacao = null;
+let temporizadorFimTransformacao = null;
 
 function agendarRender(estado) {
   const executar = (agora) => {
@@ -388,8 +389,12 @@ function ligarAlca(estado, chave, marcador) {
   let inicial = null;
 
   marcador.on('dragstart', () => {
+    clearTimeout(temporizadorFimTransformacao);
+    temporizadorFimTransformacao = null;
     mapa.dragging.disable();
+    marcador.getElement()?.classList.add('arrastando');
     inicial = snapshotAlca(estado, chave, marcador);
+    estado.callbacks.onTransformStart?.(estadoPublico(estado));
   });
 
   marcador.on('drag', () => {
@@ -399,33 +404,46 @@ function ligarAlca(estado, chave, marcador) {
 
   marcador.on('dragend', () => {
     mapa.dragging.enable();
+    marcador.getElement()?.classList.remove('arrastando');
     renderizar(estado);
 
-    if (inicial?.tipo === 'center') {
-      estado.callbacks.onMove?.(estadoPublico(estado));
-    }
-
-    setTimeout(
-      () => estado.callbacks.onTransformEnd?.(estadoPublico(estado)),
-      ATRASO_FIM_TRANSFORMACAO_MS,
-    );
+    clearTimeout(temporizadorFimTransformacao);
+    temporizadorFimTransformacao = setTimeout(() => {
+      temporizadorFimTransformacao = null;
+      estado.callbacks.onTransformEnd?.(estadoPublico(estado));
+    }, ATRASO_FIM_TRANSFORMACAO_MS);
     inicial = null;
   });
 }
 
 function criarAlcas(estado) {
   const definicoes = [
-    ['center', 'center', '✥', 'Mover forma'],
+    [
+      'center',
+      'center',
+      '<span class="shape-handle__glyph" aria-hidden="true">✥</span><span class="shape-handle__label">Drag to move shape</span>',
+      'Mover forma',
+    ],
     ['nw', 'corner', '', 'Redimensionar'],
     ['ne', 'corner', '', 'Redimensionar'],
     ['sw', 'corner', '', 'Redimensionar'],
     ['se', 'corner', '', 'Redimensionar'],
-    ['rotation', 'rotation', '↻', 'Rodar forma'],
+    ['rotation', 'rotation', '', 'Rodar forma'],
     ['left', 'edge-ew', '⇔', 'Escalar no eixo X (esquerda)'],
     ['right', 'edge-ew', '⇔', 'Escalar no eixo X (direita)'],
     ['top', 'edge-ns', '⇕', 'Escalar no eixo Y (topo)'],
     ['bottom', 'edge-ns', '⇕', 'Escalar no eixo Y (base)'],
   ];
+
+  // Haste visual que liga o topo da forma à alça de rotação.
+  estado.haste = L.polyline([], {
+    color: '#0f766e',
+    weight: 1.5,
+    opacity: 0.75,
+    dashArray: '4 4',
+    interactive: false,
+    className: 'shape-handle-stem',
+  }).addTo(getMap());
 
   for (const [chave, tipo, html, titulo] of definicoes) {
     const marcador = criarMarcadorAlca({ lat: 0, lng: 0 }, tipo, html, titulo);
@@ -441,6 +459,13 @@ function atualizarAlcas(estado) {
   for (const [chave, marcador] of estado.alcas) {
     const posicao = posicoes[chave];
     if (posicao) marcador.setLatLng([posicao.lat, posicao.lng]);
+  }
+
+  if (estado.haste) {
+    estado.haste.setLatLngs([
+      [posicoes.top.lat, posicoes.top.lng],
+      [posicoes.rotation.lat, posicoes.rotation.lng],
+    ]);
   }
 }
 
@@ -485,6 +510,7 @@ export function criarForma({
     callbacks: callbacks ?? {},
     camadas: [],
     alcas: new Map(),
+    haste: null,
     latlngs: [],
     visivel: false,
   };
@@ -555,6 +581,10 @@ export function definirVisibilidade(id, visivel) {
     if (mostrar) marcador.addTo(mapa);
     else mapa.removeLayer(marcador);
   }
+  if (estado.haste) {
+    if (mostrar) estado.haste.addTo(mapa);
+    else mapa.removeLayer(estado.haste);
+  }
 
   estado.visivel = mostrar;
   return true;
@@ -570,13 +600,17 @@ export function removerForma(id) {
   if (!estado) return false;
 
   estado.removido = true;
+  clearTimeout(temporizadorFimTransformacao);
+  temporizadorFimTransformacao = null;
 
   const mapa = getMap();
   for (const camada of estado.camadas) mapa.removeLayer(camada);
   for (const marcador of estado.alcas.values()) mapa.removeLayer(marcador);
+  if (estado.haste) mapa.removeLayer(estado.haste);
 
   estado.camadas = [];
   estado.alcas.clear();
+  estado.haste = null;
   formas.delete(id);
   return true;
 }

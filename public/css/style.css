@@ -238,6 +238,21 @@ body {
   gap: 12px;
 }
 
+.painel-secao:not([hidden]) {
+  animation: painel-entrar 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes painel-entrar {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 .painel-cabecalho {
   display: flex;
   align-items: center;
@@ -372,6 +387,29 @@ body {
     transform 0.15s ease;
 }
 
+.painel-forma:not([hidden]) .forma-opcao {
+  animation: forma-entrar 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.painel-forma:not([hidden]) .forma-opcao:nth-child(2) {
+  animation-delay: 35ms;
+}
+
+.painel-forma:not([hidden]) .forma-opcao:nth-child(3) {
+  animation-delay: 70ms;
+}
+
+@keyframes forma-entrar {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .forma-opcao svg {
   width: 44px;
   height: 44px;
@@ -494,16 +532,48 @@ body {
   line-height: 1.4;
 }
 
-.painel-forma[data-estado='calculando'] .forma-status {
+.painel-forma[data-estado='calculando'] .forma-status,
+.painel-forma[data-estado='ajustando'] .forma-status {
   border-left-color: #e8a33d;
   background: #fdf6e8;
   color: #7a5410;
+}
+
+.painel-forma[data-estado='ajustando'] .forma-status {
+  border-left-color: #3b82f6;
+  background: #eef4ff;
+  color: #1d4ed8;
 }
 
 .painel-forma[data-estado='incompleto'] .forma-status {
   border-left-color: var(--vermelho);
   background: #fdeeee;
   color: #8d2421;
+}
+
+/* Loading subtil nos CTAs do Auto-Fit */
+.painel-forma[data-estado='calculando'] #btn-melhor-local::after,
+.painel-forma[data-estado='calculando'] #btn-usar-rota::after {
+  content: '';
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  margin-left: 8px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  vertical-align: -1px;
+  animation: girar 0.7s linear infinite;
+}
+
+.btn[aria-busy='true'] {
+  cursor: progress;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ==========================================
@@ -857,36 +927,100 @@ body.ocupado #map {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
   border: 2px solid var(--verde-escuro);
   border-radius: 50%;
   background: #fff;
   color: var(--verde-escuro);
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
   cursor: grab;
 }
 
 .shape-handle:active,
-.image-handle:active {
+.image-handle:active,
+.shape-handle.arrastando {
   cursor: grabbing;
 }
 
+/* Centro: mover + tooltip flutuante */
 .shape-handle--center {
-  border-radius: 5px;
+  border-color: #fff;
+  border-radius: 50%;
   background: var(--verde-escuro);
   color: #fff;
+  cursor: move;
 }
 
-.shape-handle--rotation {
-  border-color: var(--vermelho);
-  color: var(--vermelho);
+.shape-handle--center.arrastando {
+  box-shadow:
+    0 0 0 3px rgba(15, 118, 110, 0.25),
+    0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
-.shape-handle--corner,
+.shape-handle__glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+.shape-handle__label {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 7px);
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #101418;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  transform: translateX(-50%) translateY(3px);
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease;
+}
+
+.shape-handle--center:hover .shape-handle__label,
+.shape-handle--center.arrastando .shape-handle__label {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Cantos: círculos brancos de redimensionamento uniforme */
+.shape-handle--corner {
+  border-color: var(--verde-escuro);
+  border-radius: 50%;
+  background: #fff;
+}
+
+/* Bordas: quadrados verdes de escala por eixo */
 .shape-handle--edge-ew,
 .shape-handle--edge-ns {
+  border-color: #fff;
   border-radius: 3px;
+  background: var(--verde-escuro);
+  color: #fff;
+  font-size: 9px;
+}
+
+/* Rotação: círculo branco ligado ao topo por uma haste tracejada */
+.shape-handle--rotation {
+  border-color: var(--verde-escuro);
+  background: #fff;
+  color: var(--verde-escuro);
+}
+
+.shape-handle-stem {
+  pointer-events: none;
 }
 
 .image-handle {

@@ -122,7 +122,7 @@ export function obterAlvoKm() {
 
 /**
  * Atualiza os textos/estados do painel da forma.
- * @param {{resumo?:string, alvoKm?:number, distanciaKm?:number|null, status?:string, podeUsar?:boolean, calculando?:boolean}} dados
+ * @param {{resumo?:string, alvoKm?:number, distanciaKm?:number|null, status?:string, podeUsar?:boolean, calculando?:boolean, ajustando?:boolean}} dados
  */
 export function atualizarPainelForma({
   resumo,
@@ -131,7 +131,9 @@ export function atualizarPainelForma({
   status,
   podeUsar = false,
   calculando = false,
+  ajustando = false,
 } = {}) {
+  const ocupado = Boolean(calculando) || Boolean(ajustando);
   if (typeof resumo === 'string') {
     const alvoResumo = elemento('forma-resumo');
     if (alvoResumo) alvoResumo.textContent = resumo;
@@ -168,13 +170,26 @@ export function atualizarPainelForma({
 
   const painel = elemento('painel-forma');
   if (painel) {
-    painel.classList.toggle('calculando', Boolean(calculando));
-    painel.dataset.estado = calculando ? 'calculando' : podeUsar ? 'pronto' : 'incompleto';
+    painel.classList.toggle('calculando', ocupado);
+    painel.dataset.estado = ajustando
+      ? 'ajustando'
+      : calculando
+        ? 'calculando'
+        : podeUsar
+          ? 'pronto'
+          : 'incompleto';
+    painel.setAttribute('aria-busy', String(ocupado));
   }
 
   const botaoUsar = elemento('btn-usar-rota');
-  if (botaoUsar) botaoUsar.disabled = !podeUsar || Boolean(calculando);
+  if (botaoUsar) {
+    botaoUsar.disabled = !podeUsar || ocupado;
+    botaoUsar.setAttribute('aria-busy', String(ocupado));
+  }
 
   const botaoMelhor = elemento('btn-melhor-local');
-  if (botaoMelhor) botaoMelhor.disabled = Boolean(calculando);
+  if (botaoMelhor) {
+    botaoMelhor.disabled = ocupado;
+    botaoMelhor.setAttribute('aria-busy', String(ocupado));
+  }
 }

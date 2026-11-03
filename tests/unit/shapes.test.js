@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   ESCALA_MINIMA,
   FORMAS_PADRAO,
@@ -138,6 +138,24 @@ describe('map/shapes — integração Leaflet (jsdom)', () => {
   it('cria a forma e as 10 alças no mapa', () => {
     const forma = criarForma({ shape: 'estrela', center: CENTRO, size: 1000 });
 
+    const centro = alca('Mover forma');
+    const canto = alca('Redimensionar');
+    const borda = alca('Escalar no eixo X (esquerda)');
+    const rotacao = alca('Rodar forma');
+
+    expect(centro.options.icon.options.className).toContain('shape-handle--center');
+    expect(centro.options.icon.options.html).toContain('Drag to move shape');
+    expect(canto.options.icon.options.className).toContain('shape-handle--corner');
+    expect(borda.options.icon.options.className).toContain('shape-handle--edge-ew');
+    expect(rotacao.options.icon.options.className).toContain('shape-handle--rotation');
+
+    let haste = null;
+    getMap().eachLayer((camada) => {
+      if (camada.options?.className === 'shape-handle-stem') haste = camada;
+    });
+    expect(haste).not.toBeNull();
+    expect(haste.getLatLngs()).toHaveLength(2);
+
     expect(forma).toMatchObject({ size: 1000, rotation: 0, scaleX: 1, scaleY: 1 });
     expect(getForma(forma.id)).not.toBeNull();
     expect(listarFormas()).toHaveLength(1);
@@ -162,6 +180,36 @@ describe('map/shapes — integração Leaflet (jsdom)', () => {
     expect(atualizada.center.lat).toBeCloseTo(CENTRO.lat + 0.002, 6);
     expect(atualizada.center.lng).toBeCloseTo(CENTRO.lng + 0.002, 6);
     expect(getMap().dragging.enabled()).toBe(true);
+  });
+
+  it('emite onTransformStart no dragstart e onTransformEnd apenas no dragend', async () => {
+    const onTransformStart = vi.fn();
+    const onTransformEnd = vi.fn();
+    const forma = criarForma({
+      shape: 'estrela',
+      center: CENTRO,
+      size: 1000,
+      callbacks: { onTransformStart, onTransformEnd },
+    });
+    const marcador = alca('Redimensionar');
+    const inicial = marcador.getLatLng();
+
+    marcador.fire('dragstart');
+    expect(onTransformStart).toHaveBeenCalledTimes(1);
+
+    marcador.setLatLng([
+      CENTRO.lat + (inicial.lat - CENTRO.lat) * 1.2,
+      CENTRO.lng + (inicial.lng - CENTRO.lng) * 1.2,
+    ]);
+    marcador.fire('drag');
+    expect(onTransformStart).toHaveBeenCalledTimes(1);
+    expect(onTransformEnd).not.toHaveBeenCalled();
+
+    marcador.fire('dragend');
+    await new Promise((resolver) => setTimeout(resolver, 70));
+
+    expect(onTransformEnd).toHaveBeenCalledTimes(1);
+    expect(getForma(forma.id).size).toBeGreaterThan(1000);
   });
 
   it('redimensiona pelos cantos com escala uniforme e mínimo de 25 m', () => {
